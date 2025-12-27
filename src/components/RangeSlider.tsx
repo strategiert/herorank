@@ -22,7 +22,7 @@ export function RangeSlider({
   step = 1
 }: RangeSliderProps) {
   const [localValue, setLocalValue] = useState(value);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync with external value
   useEffect(() => {

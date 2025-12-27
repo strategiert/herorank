@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, getAnonymousUserId, type UserFavorite } from '../lib/supabase';
+import { supabase, getAnonymousUserId } from '../lib/supabase';
 import type { Hero } from '../types/hero';
 
 /**
