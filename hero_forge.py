@@ -59,22 +59,24 @@ class HeroStats(BaseModel):
 class RawHero(BaseModel):
     id: int
     name: str
-    slug: str
-    powerstats: Dict[str, int]
-    appearance: Dict
-    biography: Dict
-    images: Dict
+    universe: str
+    tier: str
+    power: int
+    image: str = "⚡"  # Default emoji if missing
+    stats: Dict[str, Optional[int]]
+    abilities: Optional[List[str]] = None
+    description: Optional[str] = None
 
     def to_stats(self) -> HeroStats:
-        """Extract stats from powerstats."""
-        ps = self.powerstats
+        """Extract stats from stats dict, handling None values."""
+        s = self.stats
         return HeroStats(
-            strength=ps.get('strength', 50),
-            speed=ps.get('speed', 50),
-            power=ps.get('power', 50),
-            durability=ps.get('durability', 50),
-            combat=ps.get('combat', 50),
-            intelligence=ps.get('intelligence', 50)
+            strength=s.get('strength') or 50,
+            speed=s.get('speed') or 50,
+            power=s.get('power') or self.power or 50,
+            durability=s.get('durability') or 50,
+            combat=s.get('combat') or 50,
+            intelligence=s.get('intelligence') or 50
         )
 
 
@@ -588,7 +590,7 @@ class HeroForge:
                 quote=content.quote,
                 stats=scaled_stats,
                 combatScore=round(combat_score, 2),
-                image=raw_hero.images.get('sm', f'/heroes/{raw_hero.id}.jpg'),
+                image=raw_hero.image,
                 needsManualReview=needs_review,
                 retryCount=retry_count
             )
