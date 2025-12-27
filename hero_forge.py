@@ -317,6 +317,86 @@ Respond ONLY with valid JSON:
             raise Exception(f"OpenAI generation failed: {e}")
 
 
+class AIMLAPIProvider(AIProvider):
+    """AIMLAPI Gemini 3 Flash provider (OpenAI-compatible API)."""
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        try:
+            import openai
+            self.client = openai.AsyncOpenAI(
+                base_url="https://api.aimlapi.com/v1",
+                api_key=api_key
+            )
+        except ImportError:
+            raise ImportError("Install openai: pip install openai")
+
+    async def generate_hero_content(
+        self,
+        stats: HeroStats,
+        faction: Faction,
+        rarity: Rarity,
+        retry_context: Optional[str] = None
+    ) -> AIGeneratedContent:
+        """Generate content using AIMLAPI Gemini 3 Flash."""
+
+        faction_descriptions = {
+            Faction.TERRAGUARD: "ground-based tank with high defense and strength",
+            Faction.CYBER_OPS: "tech specialist with high damage and intelligence",
+            Faction.AERO_VANGUARD: "high-speed aerial combatant with evasion"
+        }
+
+        prompt = f"""You are a Sci-Fi hero designer for "Infinite Arena", a futuristic battle game.
+
+CONSTRAINTS:
+- NO Marvel/DC references (no Wayne, Stark, Parker, Rogers, etc.)
+- NO real-world locations or brands
+- Military/cyberpunk tone
+- Must fit faction: {faction.value} ({faction_descriptions[faction]})
+- Rarity: {rarity.value}
+
+HERO PROFILE:
+Combat Score: {stats.compute_combat_score():.1f}
+Faction: {faction.value}
+Rarity: {rarity.value}
+Dominant Stats: Power={stats.power}, Speed={stats.speed}, Durability={stats.durability}
+
+{retry_context or ''}
+
+Generate a unique hero:
+1. NAME: Military-style callsign (2-3 words, e.g., "Vortex Striker", "Iron Sentinel")
+2. BIO: 2-sentence backstory (30-50 words, focus on origin and motivation)
+3. QUOTE: One battle quote (max 15 words)
+
+Respond ONLY with valid JSON:
+{{"name": "...", "bio": "...", "quote": "..."}}"""
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="google/gemini-3-flash-preview",
+                messages=[
+                    {"role": "system", "content": "You are a creative sci-fi hero designer. Always respond with valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.9,
+                max_tokens=250
+            )
+
+            content = response.choices[0].message.content.strip()
+
+            # Extract JSON if wrapped in markdown
+            if '```json' in content:
+                content = content.split('```json')[1].split('```')[0].strip()
+            elif '```' in content:
+                content = content.split('```')[1].split('```')[0].strip()
+
+            data = json.loads(content)
+            return AIGeneratedContent(**data)
+
+        except Exception as e:
+            raise Exception(f"AIMLAPI generation failed: {e}")
+
+
 class GeminiProvider(AIProvider):
     """Google Gemini Flash provider."""
 
@@ -565,7 +645,7 @@ class HeroForge:
                         content = AIGeneratedContent(
                             name=f"REVIEW_{raw_hero.id}_{raw_hero.name[:20]}",
                             bio=f"[MANUAL REVIEW NEEDED] Original: {raw_hero.name}",
-                            quote="..."
+                            quote="NEEDS REVIEW"
                         )
 
             if content is None or needs_review:
@@ -575,7 +655,7 @@ class HeroForge:
                     content = AIGeneratedContent(
                         name=f"REVIEW_{raw_hero.id}",
                         bio="[MANUAL REVIEW NEEDED]",
-                        quote="..."
+                        quote="NEEDS REVIEW"
                     )
 
             self.stats_total['processed'] += 1
@@ -678,7 +758,7 @@ async def main():
     parser.add_argument('--input', type=str, default='heroes_raw.json', help='Input JSON file')
     parser.add_argument('--output', type=str, default='heroes_processed.json', help='Output JSON file')
     parser.add_argument('--mode', choices=['test', 'prod'], default='test', help='Mode: test (mock AI) or prod (real AI)')
-    parser.add_argument('--provider', choices=['openai', 'gemini', 'mock'], default='mock', help='AI provider')
+    parser.add_argument('--provider', choices=['openai', 'gemini', 'aimlapi', 'mock'], default='mock', help='AI provider')
     parser.add_argument('--api-key', type=str, help='API key for AI provider')
     parser.add_argument('--limit', type=int, help='Limit number of heroes (for testing)')
     parser.add_argument('--rate-limit', type=int, default=10, help='Max concurrent API requests')
@@ -713,6 +793,11 @@ async def main():
             print("❌ Error: --api-key required for Gemini provider")
             return
         ai_provider = GeminiProvider(args.api_key)
+    elif args.provider == 'aimlapi':
+        if not args.api_key:
+            print("❌ Error: --api-key required for AIMLAPI provider")
+            return
+        ai_provider = AIMLAPIProvider(args.api_key)
     else:
         ai_provider = MockAIProvider()
 
