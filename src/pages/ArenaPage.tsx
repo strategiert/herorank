@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Shuffle, Play, RotateCcw, History } from 'lucide-react';
+import { Shuffle, Play, RotateCcw, History, Zap, Shield, Sparkles } from 'lucide-react';
 import type { Hero } from '../types/hero';
 import { tierColors } from '../types/hero';
 import { superheroes } from '../data/superheroes';
@@ -19,7 +19,16 @@ interface BattleState {
 
 interface BattleLogEntry {
   text: string;
-  type: 'start' | 'attack' | 'end';
+  type: 'start' | 'attack' | 'defense' | 'special' | 'end';
+  damage?: number;
+  actor?: string;
+}
+
+interface FloatingDamage {
+  id: number;
+  damage: number;
+  position: 1 | 2;
+  isCrit?: boolean;
 }
 
 export default function ArenaPage() {
@@ -29,6 +38,8 @@ export default function ArenaPage() {
   const [battleLog, setBattleLog] = useState<BattleLogEntry[]>([]);
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [battleHistory] = useState<any[]>([]);
+  const [floatingDamages, setFloatingDamages] = useState<FloatingDamage[]>([]);
+  const [shake, setShake] = useState<1 | 2 | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const autoIntervalRef = useRef<number | null>(null);
 
@@ -80,6 +91,19 @@ export default function ArenaPage() {
     return Math.round(basePower * (0.8 + Math.random() * 0.4));
   };
 
+  const addFloatingDamage = (damage: number, position: 1 | 2, isCrit = false) => {
+    const id = Date.now() + Math.random();
+    setFloatingDamages(prev => [...prev, { id, damage, position, isCrit }]);
+    setTimeout(() => {
+      setFloatingDamages(prev => prev.filter(d => d.id !== id));
+    }, 1500);
+  };
+
+  const triggerShake = (position: 1 | 2) => {
+    setShake(position);
+    setTimeout(() => setShake(null), 200);
+  };
+
   const selectFighter = (hero: Hero) => {
     if (battleState?.isActive) return;
 
@@ -104,6 +128,7 @@ export default function ArenaPage() {
     setBattleState(null);
     setBattleLog([]);
     setIsAutoMode(false);
+    setFloatingDamages([]);
   };
 
   const randomFighters = () => {
@@ -146,15 +171,22 @@ export default function ArenaPage() {
     let newHp2 = battleState.hp2;
 
     // Fighter 1 attacks
-    const ability1Index = Math.floor(Math.random() * Math.min(3, fighter1.abilities.length));
+    const ability1Index = Math.floor(Math.random() * Math.min(4, fighter1.abilities.length));
     const ability1 = fighter1.abilities[ability1Index] || 'Angriff';
     const damage1 = getAbilityPower(fighter1, ability1Index);
-    const actualDamage1 = Math.max(1, damage1 - Math.floor(fighter2.stats.durability / 10));
+    const isCrit1 = Math.random() > 0.85;
+    const actualDamage1 = Math.max(1, Math.round((damage1 - Math.floor(fighter2.stats.durability / 10)) * (isCrit1 ? 1.5 : 1)));
     newHp2 = Math.max(0, newHp2 - actualDamage1);
 
+    // Trigger effects
+    triggerShake(2);
+    addFloatingDamage(actualDamage1, 2, isCrit1);
+
     newLog.push({
-      text: `${fighter1.name} nutzt ${ability1}! (-${actualDamage1} HP)`,
-      type: 'attack'
+      text: `${fighter1.name} nutzt ${ability1}!`,
+      type: 'attack',
+      damage: actualDamage1,
+      actor: fighter1.name
     });
 
     // Check if fighter 2 is defeated
@@ -167,7 +199,7 @@ export default function ArenaPage() {
         winner: fighter1,
       });
       setBattleLog(prev => [...prev, ...newLog, {
-        text: `🏆 ${fighter1.name} gewinnt den Kampf!`,
+        text: `${fighter1.name} gewinnt den Kampf!`,
         type: 'end'
       }]);
       stopAutoMode();
@@ -175,15 +207,22 @@ export default function ArenaPage() {
     }
 
     // Fighter 2 attacks
-    const ability2Index = Math.floor(Math.random() * Math.min(3, fighter2.abilities.length));
+    const ability2Index = Math.floor(Math.random() * Math.min(4, fighter2.abilities.length));
     const ability2 = fighter2.abilities[ability2Index] || 'Angriff';
     const damage2 = getAbilityPower(fighter2, ability2Index);
-    const actualDamage2 = Math.max(1, damage2 - Math.floor(fighter1.stats.durability / 10));
+    const isCrit2 = Math.random() > 0.85;
+    const actualDamage2 = Math.max(1, Math.round((damage2 - Math.floor(fighter1.stats.durability / 10)) * (isCrit2 ? 1.5 : 1)));
     newHp1 = Math.max(0, newHp1 - actualDamage2);
 
+    // Trigger effects
+    triggerShake(1);
+    addFloatingDamage(actualDamage2, 1, isCrit2);
+
     newLog.push({
-      text: `${fighter2.name} nutzt ${ability2}! (-${actualDamage2} HP)`,
-      type: 'attack'
+      text: `${fighter2.name} nutzt ${ability2}!`,
+      type: 'attack',
+      damage: actualDamage2,
+      actor: fighter2.name
     });
 
     // Check if fighter 1 is defeated
@@ -196,7 +235,7 @@ export default function ArenaPage() {
         winner: fighter2,
       });
       setBattleLog(prev => [...prev, ...newLog, {
-        text: `🏆 ${fighter2.name} gewinnt den Kampf!`,
+        text: `${fighter2.name} gewinnt den Kampf!`,
         type: 'end'
       }]);
       stopAutoMode();
@@ -219,13 +258,13 @@ export default function ArenaPage() {
         setIsAutoMode(true);
         autoIntervalRef.current = window.setInterval(() => {
           executeRound();
-        }, 800);
+        }, 1200);
       }, 300);
     } else {
       setIsAutoMode(true);
       autoIntervalRef.current = window.setInterval(() => {
         executeRound();
-      }, 800);
+      }, 1200);
     }
   };
 
@@ -252,7 +291,7 @@ export default function ArenaPage() {
     if (!hero) {
       return (
         <div
-          className="flex-1 rounded-xl border-2 border-dashed border-gray-600/40 p-8 flex flex-col items-center justify-center min-h-[240px]"
+          className="flex-1 rounded-xl border-2 border-dashed border-gray-600/40 p-8 flex flex-col items-center justify-center min-h-[240px] transition-all duration-200"
           style={{
             background: 'linear-gradient(135deg, rgba(30, 30, 45, 0.4), rgba(20, 20, 35, 0.6))'
           }}
@@ -267,21 +306,49 @@ export default function ArenaPage() {
     const displayMaxHp = maxHp ?? calculateHP(hero);
     const hpPercent = (displayHp / displayMaxHp) * 100;
 
+    // Universe glow colors
+    const glowColor = hero.universe === 'Marvel' ? '#e74c3c' : '#3498db';
+
     return (
-      <div className="flex-1 flex flex-col gap-3">
+      <div
+        className={`flex-1 flex flex-col gap-3 transition-transform duration-200 ${
+          shake === position ? 'animate-shake' : ''
+        }`}
+        style={{
+          filter: `drop-shadow(0 0 20px ${glowColor}40)`
+        }}
+      >
+        {/* Floating Damage Numbers */}
+        {floatingDamages
+          .filter(d => d.position === position)
+          .map(({ id, damage, isCrit }) => (
+            <div
+              key={id}
+              className="absolute -top-8 left-1/2 -translate-x-1/2 animate-float-up pointer-events-none z-50"
+              style={{
+                fontSize: isCrit ? '2rem' : '1.5rem',
+                fontWeight: 'bold',
+                color: isCrit ? '#ff6b6b' : '#ef4444',
+                textShadow: '0 0 10px rgba(239, 68, 68, 0.8)'
+              }}
+            >
+              -{damage}
+            </div>
+          ))}
+
         {/* Hero Name & Avatar */}
-        <div className="text-center">
+        <div className="text-center relative">
           <div
-            className="text-7xl mb-2 inline-block"
+            className="text-7xl mb-2 inline-block transition-transform duration-300 hover:scale-110"
             style={{
-              filter: `drop-shadow(0 4px 16px ${hero.color}99)`
+              filter: `drop-shadow(0 4px 20px ${hero.color}99)`
             }}
           >
             {hero.image}
           </div>
           <h3 className="text-xl font-bold text-white mb-1">{hero.name}</h3>
           <span
-            className={`inline-block text-xs px-3 py-1 rounded font-bold ${
+            className={`inline-block text-xs px-3 py-1 rounded-lg font-bold transition-all duration-200 ${
               hero.universe === 'Marvel' ? 'bg-red-600/90' : 'bg-blue-600/90'
             }`}
           >
@@ -289,55 +356,75 @@ export default function ArenaPage() {
           </span>
         </div>
 
-        {/* HP Bar */}
-        <div className="bg-slate-900/60 rounded-lg p-3">
+        {/* HP Bar with Gradient */}
+        <div className="bg-slate-900/60 rounded-xl p-3 shadow-md">
           <div className="flex justify-between text-sm font-bold text-gray-300 mb-2">
             <span>HP</span>
             <span className="font-mono">{displayHp}/{displayMaxHp}</span>
           </div>
           <div className="h-6 bg-gray-800 rounded-full overflow-hidden shadow-inner">
             <div
-              className="h-full transition-all duration-500 ease-out rounded-full"
+              className="h-full transition-all duration-700 ease-out rounded-full relative"
               style={{
                 width: `${hpPercent}%`,
                 background: hpPercent > 50
-                  ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                  ? 'linear-gradient(90deg, #4ade80, #22c55e, #16a34a)'
                   : hpPercent > 25
-                  ? 'linear-gradient(90deg, #eab308, #ca8a04)'
-                  : 'linear-gradient(90deg, #ef4444, #dc2626)',
+                  ? 'linear-gradient(90deg, #facc15, #eab308, #ca8a04)'
+                  : 'linear-gradient(90deg, #ef4444, #dc2626, #b91c1c)',
                 boxShadow: hpPercent > 50
-                  ? '0 0 10px rgba(34, 197, 94, 0.5)'
+                  ? '0 0 15px rgba(74, 222, 128, 0.6), inset 0 1px 3px rgba(255,255,255,0.2)'
                   : hpPercent > 25
-                  ? '0 0 10px rgba(234, 179, 8, 0.5)'
-                  : '0 0 10px rgba(239, 68, 68, 0.5)'
+                  ? '0 0 15px rgba(250, 204, 21, 0.6), inset 0 1px 3px rgba(255,255,255,0.2)'
+                  : '0 0 15px rgba(239, 68, 68, 0.6), inset 0 1px 3px rgba(255,255,255,0.2)'
               }}
-            />
+            >
+              <div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Abilities */}
+        {/* Abilities with Enhanced Hover */}
         <div className="grid grid-cols-2 gap-2">
           {hero.abilities.slice(0, 4).map((ability, idx) => {
             const statIcons = ['👊', '🔮', '⚔️', '⚡'];
             const statColors = ['#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6'];
-            const pwrValue = `PWR-${Math.floor(Math.random() * 40) + 60}`;
+            const pwrValue = Math.floor(Math.random() * 40) + 60;
 
             return (
               <div
                 key={idx}
-                className="flex items-center gap-2 bg-slate-900/70 rounded-lg px-3 py-2.5 border border-gray-700/50"
+                className="group relative flex items-center gap-2 bg-slate-900/70 rounded-lg px-3 py-2.5 border border-gray-700/50 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                style={{
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                title={ability}
               >
-                <span className="text-lg">{statIcons[idx]}</span>
+                {/* PWR Badge */}
+                <div
+                  className="absolute -top-1 -right-1 text-[8px] font-bold px-1.5 py-0.5 rounded-md shadow-sm"
+                  style={{
+                    background: statColors[idx],
+                    color: 'white'
+                  }}
+                >
+                  {pwrValue}
+                </div>
+
+                <span className="text-lg transition-transform duration-200 group-hover:scale-110">
+                  {statIcons[idx]}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-gray-200 truncate font-medium">
                     {ability}
                   </div>
-                  <div
-                    className="text-[10px] font-bold mt-0.5"
-                    style={{ color: statColors[idx] }}
-                  >
-                    {pwrValue}
-                  </div>
+                </div>
+
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 shadow-lg">
+                  {ability}
                 </div>
               </div>
             );
@@ -345,6 +432,16 @@ export default function ArenaPage() {
         </div>
       </div>
     );
+  };
+
+  // Log Icon Helper
+  const getLogIcon = (type: BattleLogEntry['type']) => {
+    switch (type) {
+      case 'attack': return <Zap size={14} className="text-red-400" />;
+      case 'defense': return <Shield size={14} className="text-blue-400" />;
+      case 'special': return <Sparkles size={14} className="text-yellow-400" />;
+      default: return null;
+    }
   };
 
   // Extract damage types from abilities
@@ -409,7 +506,7 @@ export default function ArenaPage() {
           </p>
 
           {/* Historie Button */}
-          <button className="mt-3 px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 rounded-lg text-sm text-gray-300 flex items-center gap-2 mx-auto transition-colors">
+          <button className="mt-3 px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 rounded-lg text-sm text-gray-300 flex items-center gap-2 mx-auto transition-all duration-200 hover:shadow-md">
             <History size={16} />
             Historie ({battleHistory.length})
           </button>
@@ -424,7 +521,7 @@ export default function ArenaPage() {
           }}
         >
           {/* Fighter Panels */}
-          <div className="flex gap-6 items-start mb-6">
+          <div className="flex gap-6 items-start mb-6 relative">
             <FighterPanel
               hero={fighter1}
               hp={battleState?.hp1}
@@ -432,21 +529,25 @@ export default function ArenaPage() {
               position={1}
             />
 
-            {/* VS Divider */}
+            {/* VS Divider with Pulse Animation */}
             <div className="flex flex-col items-center justify-center px-4 py-8">
+              {/* Vertical Divider Line */}
+              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-transparent via-gray-600 to-transparent" />
+
               <div
-                className="text-5xl font-black mb-2"
+                className="text-5xl font-black mb-2 animate-pulse-subtle relative z-10"
                 style={{
                   background: 'linear-gradient(180deg, #fbbf24, #f59e0b, #d97706)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 20px rgba(251, 191, 36, 0.3)'
+                  textShadow: '0 0 25px rgba(251, 191, 36, 0.4)',
+                  animation: 'pulse-vs 2s ease-in-out infinite'
                 }}
               >
                 VS
               </div>
               {battleState && (
-                <div className="text-sm text-gray-400 font-mono bg-slate-800/50 px-3 py-1 rounded-full">
+                <div className="text-sm text-gray-400 font-mono bg-slate-800/50 px-3 py-1 rounded-full shadow-sm relative z-10">
                   R{battleState.round}
                 </div>
               )}
@@ -465,7 +566,7 @@ export default function ArenaPage() {
             {(!battleState || !battleState.isActive) && fighter1 && fighter2 && (
               <button
                 onClick={startBattle}
-                className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105"
+                className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 shadow-lg hover:scale-105 hover:shadow-xl"
                 style={{
                   background: 'linear-gradient(135deg, #16a34a, #15803d)',
                   color: 'white'
@@ -479,7 +580,7 @@ export default function ArenaPage() {
             {battleState?.isActive && !isAutoMode && (
               <button
                 onClick={startAutoMode}
-                className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg"
+                className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 shadow-lg hover:scale-105"
                 style={{
                   background: 'linear-gradient(135deg, #9333ea, #7e22ce)',
                   color: 'white'
@@ -493,7 +594,7 @@ export default function ArenaPage() {
             <button
               onClick={randomFighters}
               disabled={battleState?.isActive}
-              className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 shadow-lg hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{
                 background: battleState?.isActive
                   ? '#4b5563'
@@ -507,7 +608,7 @@ export default function ArenaPage() {
 
             <button
               onClick={clearFighters}
-              className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg"
+              className="px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all duration-200 shadow-lg hover:scale-105"
               style={{
                 background: 'linear-gradient(135deg, #4b5563, #374151)',
                 color: 'white'
@@ -518,29 +619,36 @@ export default function ArenaPage() {
             </button>
           </div>
 
-          {/* Kampflog */}
+          {/* Enhanced Kampflog */}
           {battleLog.length > 0 && (
-            <div className="bg-slate-900/60 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-yellow-500 mb-2 flex items-center gap-2">
+            <div className="bg-slate-900/60 rounded-xl p-4 shadow-md">
+              <h3 className="text-sm font-bold text-yellow-500 mb-3 flex items-center gap-2">
                 <span>📜</span> Kampflog
               </h3>
               <div
                 ref={logRef}
-                className="h-24 overflow-y-auto space-y-1 text-sm scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
+                className="max-h-32 overflow-y-auto space-y-2 text-sm scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
               >
                 {battleLog.map((entry, idx) => (
                   <div
                     key={idx}
-                    className={`px-3 py-1.5 rounded text-sm ${
+                    className={`px-4 py-2.5 rounded-lg transition-all duration-300 animate-slide-in ${
                       entry.type === 'start'
-                        ? 'bg-blue-900/40 text-blue-200 border-l-2 border-blue-400'
+                        ? 'bg-blue-900/40 text-blue-200 border-l-4 border-blue-400 shadow-sm'
                         : entry.type === 'end'
-                        ? 'bg-yellow-900/40 text-yellow-200 font-bold border-l-2 border-yellow-400'
-                        : 'bg-slate-800/50 text-gray-300'
+                        ? 'bg-yellow-900/40 text-yellow-200 font-bold border-l-4 border-yellow-400 shadow-md'
+                        : 'bg-slate-800/60 text-gray-300 border-l-4 border-red-500/50 shadow-sm'
                     }`}
                   >
-                    {entry.type === 'start' && '⚔️ '}
-                    {entry.text}
+                    <div className="flex items-center gap-2">
+                      {getLogIcon(entry.type)}
+                      <span>{entry.text}</span>
+                      {entry.damage && (
+                        <span className="ml-auto font-bold text-red-400">
+                          -{entry.damage} HP
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -550,7 +658,7 @@ export default function ArenaPage() {
           {/* Damage Types & Elements */}
           <div className="grid grid-cols-2 gap-4 mt-4">
             {/* Kampf-Dreieck */}
-            <div className="bg-slate-900/40 rounded-lg p-3">
+            <div className="bg-slate-900/40 rounded-xl p-3 shadow-sm">
               <h4 className="text-xs font-bold text-gray-400 mb-2">Kampf-Dreieck:</h4>
               <div className="flex items-center gap-2 text-xs flex-wrap">
                 {getDamageTypes(fighter1).length > 0 ? (
@@ -568,7 +676,7 @@ export default function ArenaPage() {
             </div>
 
             {/* Elemente */}
-            <div className="bg-slate-900/40 rounded-lg p-3">
+            <div className="bg-slate-900/40 rounded-xl p-3 shadow-sm">
               <h4 className="text-xs font-bold text-gray-400 mb-2">Elemente:</h4>
               <div className="flex items-center gap-2 text-xs flex-wrap">
                 {getElementTypes(fighter2).length > 0 ? (
@@ -587,7 +695,7 @@ export default function ArenaPage() {
           </div>
         </div>
 
-        {/* Fighter Selection */}
+        {/* Enhanced Fighter Selection */}
         <div
           className="rounded-2xl p-4 shadow-xl"
           style={{
@@ -617,48 +725,52 @@ export default function ArenaPage() {
             compact
           />
 
-          {/* Hero Grid */}
+          {/* Enhanced Hero Grid */}
           <div className="mt-3">
             <div className="flex items-center gap-2 mb-2">
-              <select className="px-3 py-1.5 bg-slate-800/80 text-gray-300 text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500">
+              <select className="px-3 py-1.5 bg-slate-800/80 text-gray-300 text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 transition-all duration-200">
                 <option>Alle</option>
               </select>
-              <select className="px-3 py-1.5 bg-slate-800/80 text-gray-300 text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500">
+              <select className="px-3 py-1.5 bg-slate-800/80 text-gray-300 text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500 transition-all duration-200">
                 <option>Alle</option>
               </select>
             </div>
 
             <div className="relative">
               {/* Scroll indicators */}
-              <button className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-slate-800/90 hover:bg-slate-700 p-2 rounded-r-lg shadow-lg">
+              <button className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-slate-800/90 hover:bg-slate-700 p-2 rounded-r-lg shadow-lg transition-all duration-200">
                 <span className="text-white text-xl">◀</span>
               </button>
-              <button className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-slate-800/90 hover:bg-slate-700 p-2 rounded-l-lg shadow-lg">
+              <button className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-slate-800/90 hover:bg-slate-700 p-2 rounded-l-lg shadow-lg transition-all duration-200">
                 <span className="text-white text-xl">▶</span>
               </button>
 
               <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                <div className="flex gap-2 px-8">
+                <div className="flex gap-3 px-8">
                   {sortedHeroes.slice(0, 25).map((hero) => {
                     const isSelected = fighter1?.id === hero.id || fighter2?.id === hero.id;
                     const tierBadge = hero.tier === 'Cosmic' ? 'C' : hero.tier.charAt(0);
+                    const tierColor = tierColors[hero.tier].bg;
 
                     return (
                       <div
                         key={hero.id}
                         onClick={() => selectFighter(hero)}
-                        className={`relative cursor-pointer rounded-lg overflow-hidden transition-all hover:scale-105 flex-shrink-0 ${
-                          isSelected ? 'ring-2 ring-yellow-400 opacity-70' : ''
+                        className={`relative cursor-pointer rounded-xl overflow-hidden transition-all duration-200 hover:scale-110 hover:-translate-y-1 flex-shrink-0 ${
+                          isSelected ? 'ring-4 ring-yellow-400 opacity-70 scale-105' : ''
                         }`}
                         style={{
-                          width: '90px',
-                          background: 'linear-gradient(135deg, rgba(30, 30, 45, 0.9), rgba(20, 20, 35, 0.9))',
-                          borderTop: `3px solid ${hero.universe === 'Marvel' ? '#dc2626' : '#2563eb'}`,
+                          width: '100px',
+                          background: 'linear-gradient(135deg, rgba(30, 30, 45, 0.95), rgba(20, 20, 35, 0.95))',
+                          borderTop: `4px solid ${hero.universe === 'Marvel' ? '#dc2626' : '#2563eb'}`,
+                          boxShadow: isSelected
+                            ? `0 8px 20px ${tierColor}60, 0 0 0 4px #facc15`
+                            : `0 4px 12px rgba(0,0,0,0.3)`,
                         }}
                       >
                         {/* Tier Badge */}
                         <div
-                          className="absolute top-1 left-1 w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold z-10"
+                          className="absolute top-1.5 left-1.5 w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold z-10 shadow-md"
                           style={{
                             background: tierColors[hero.tier].bg,
                             color: tierColors[hero.tier].text,
@@ -668,22 +780,22 @@ export default function ArenaPage() {
                         </div>
 
                         {/* Hero Class Badge */}
-                        <div className="absolute top-1 right-1 z-10">
+                        <div className="absolute top-1.5 right-1.5 z-10">
                           <HeroClassIcon heroClass={hero.heroClass} size="sm" />
                         </div>
 
                         {/* Publisher Badge */}
                         <div className={`absolute bottom-1 left-1 right-1 text-center z-10`}>
-                          <span className={`text-[8px] font-bold px-2 py-0.5 rounded ${
-                            hero.universe === 'Marvel' ? 'bg-red-600/90' : 'bg-blue-600/90'
+                          <span className={`text-[9px] font-bold px-2 py-1 rounded-md shadow-sm ${
+                            hero.universe === 'Marvel' ? 'bg-red-600/95' : 'bg-blue-600/95'
                           }`}>
                             {hero.universe === 'Marvel' ? 'M' : 'DC'}
                           </span>
                         </div>
 
-                        <div className="p-2 pt-6 pb-6 text-center">
-                          <div className="text-3xl mb-1">{hero.image}</div>
-                          <div className="text-[9px] font-medium text-white truncate px-1">
+                        <div className="p-2 pt-7 pb-6 text-center">
+                          <div className="text-4xl mb-1">{hero.image}</div>
+                          <div className="text-[10px] font-medium text-white truncate px-1">
                             {hero.name}
                           </div>
                         </div>
@@ -696,6 +808,92 @@ export default function ArenaPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom Animations */}
+      <style>{`
+        @keyframes pulse-vs {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-3px); }
+          75% { transform: translateX(3px); }
+        }
+
+        .animate-shake {
+          animation: shake 0.2s ease-in-out;
+        }
+
+        @keyframes float-up {
+          0% {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -60px);
+          }
+        }
+
+        .animate-float-up {
+          animation: float-up 1.5s ease-out forwards;
+        }
+
+        @keyframes slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
+        }
+
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+
+        .animate-pulse-subtle {
+          animation: pulse-subtle 2s ease-in-out infinite;
+        }
+
+        /* Custom scrollbar */
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 6px;
+          width: 6px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.3);
+          border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: rgba(71, 85, 105, 0.5);
+          border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: rgba(71, 85, 105, 0.7);
+        }
+      `}</style>
     </div>
   );
 }
