@@ -1,5 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { Shuffle, Play, RotateCcw, History } from 'lucide-react';
+import {
+  Shuffle,
+  Play,
+  RotateCcw,
+  History,
+  Zap,
+  Shield,
+  Swords,
+  Brain,
+  Gauge,
+  ChevronDown,
+  X
+} from 'lucide-react';
 import type { Hero } from '../types/hero';
 import { tierColors } from '../types/hero';
 import { superheroes } from '../data/superheroes';
@@ -44,11 +56,11 @@ export default function ArenaPage() {
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [battleLog, setBattleLog] = useState<BattleLogEntry[]>([]);
   const [isAutoMode, setIsAutoMode] = useState(false);
-  const [_battleHistory] = useState<number>(0);
   const [floatingDamages, setFloatingDamages] = useState<FloatingDamage[]>([]);
   const [shake, setShake] = useState<1 | 2 | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [showLogModal, setShowLogModal] = useState(false);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const autoIntervalRef = useRef<number | null>(null);
 
@@ -127,7 +139,7 @@ export default function ArenaPage() {
     setFloatingDamages(prev => [...prev, { id, damage, position, isCrit }]);
     setTimeout(() => {
       setFloatingDamages(prev => prev.filter(d => d.id !== id));
-    }, 1500);
+    }, 2000);
   };
 
   const triggerShake = (position: 1 | 2) => {
@@ -316,7 +328,34 @@ export default function ArenaPage() {
     }
   };
 
-  // Fighter Panel Component - Mobile Gaming Style
+  // Stat Icons with Neon Glow
+  const StatIcon = ({ stat, value }: { stat: string; value: number }) => {
+    const icons = {
+      strength: { Icon: Zap, color: '#ff6b35' },
+      speed: { Icon: Gauge, color: '#00d4ff' },
+      durability: { Icon: Shield, color: '#4ade80' },
+      intelligence: { Icon: Brain, color: '#a855f7' },
+      combat: { Icon: Swords, color: '#ef4444' },
+    };
+
+    const config = icons[stat as keyof typeof icons] || icons.combat;
+    const { Icon, color } = config;
+
+    return (
+      <div className="flex items-center gap-2 bg-black/40 rounded-lg px-2 py-1.5 border border-white/10">
+        <Icon
+          size={16}
+          style={{
+            color,
+            filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color})`
+          }}
+        />
+        <span className="text-white font-stats font-bold text-sm">{value}</span>
+      </div>
+    );
+  };
+
+  // Fighter Panel Component - CYBER NEON STYLE
   const FighterPanel = ({
     hero,
     hp,
@@ -331,13 +370,16 @@ export default function ArenaPage() {
     if (!hero) {
       return (
         <div
-          className="flex-1 rounded-2xl border-4 border-dashed border-gray-600/30 p-8 flex flex-col items-center justify-center min-h-[280px] transition-all duration-200"
+          className="flex-1 rounded-3xl border-2 border-dashed border-cyan-500/30 p-8 flex flex-col items-center justify-center min-h-[320px] transition-all duration-300 hover:border-cyan-500/50"
           style={{
-            background: 'linear-gradient(135deg, rgba(30, 30, 45, 0.3), rgba(20, 20, 35, 0.5))'
+            background: 'rgba(10, 15, 30, 0.6)',
+            backdropFilter: 'blur(10px)'
           }}
         >
-          <span className="text-8xl mb-4 opacity-15">👤</span>
-          <span className="text-gray-400 text-xl font-bold">Kämpfer {position}</span>
+          <div className="text-8xl mb-4 opacity-20">👤</div>
+          <span className="text-cyan-400 text-xl font-gaming uppercase tracking-wider">
+            Kämpfer {position}
+          </span>
         </div>
       );
     }
@@ -345,370 +387,559 @@ export default function ArenaPage() {
     const displayHp = hp ?? calculateHP(hero);
     const displayMaxHp = maxHp ?? calculateHP(hero);
     const hpPercent = (displayHp / displayMaxHp) * 100;
-    const glowColor = hero.universe === 'Marvel' ? '#e74c3c' : '#3498db';
+    const universeColor = hero.universe === 'Marvel' ? '#e74c3c' : '#3498db';
 
     return (
       <div
-        className={`flex-1 flex flex-col gap-4 transition-transform duration-200 ${
+        className={`flex-1 flex flex-col gap-4 transition-all duration-500 ${
           shake === position ? 'animate-shake' : ''
-        }`}
+        } ${position === 1 ? 'animate-tilt-left' : 'animate-tilt-right'}`}
         style={{
-          filter: `drop-shadow(0 0 24px ${glowColor}50)`
+          filter: `drop-shadow(0 0 30px ${universeColor}60)`,
+          transformStyle: 'preserve-3d'
         }}
       >
-        {/* Floating Damage Numbers */}
-        {floatingDamages
-          .filter(d => d.position === position)
-          .map(({ id, damage, isCrit }) => (
-            <div
-              key={id}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 animate-float-up pointer-events-none z-50"
-              style={{
-                fontSize: isCrit ? '3rem' : '2.5rem',
-                fontWeight: '900',
-                color: isCrit ? '#ff6b6b' : '#ef4444',
-                textShadow: '0 0 20px rgba(239, 68, 68, 0.9), 0 4px 8px rgba(0,0,0,0.5)'
-              }}
-            >
-              -{damage}
-            </div>
-          ))}
-
-        {/* Hero Avatar - LARGE 160px */}
-        <div className="text-center relative">
-          <div
-            className="inline-block transition-transform duration-300 hover:scale-105 active:scale-95"
-            style={{
-              fontSize: '10rem',
-              filter: `drop-shadow(0 8px 24px ${hero.color}99)`
-            }}
-          >
-            {hero.image}
-          </div>
-
-          {/* Hero Name - Large & Bold */}
-          <h3 className="text-2xl font-black text-white mt-3 mb-2 tracking-tight">
-            {hero.name}
-          </h3>
-
-          {/* Publisher Badge - Large Pill */}
-          <span
-            className={`inline-block text-base px-6 py-2 rounded-full font-black uppercase tracking-wide ${
-              hero.universe === 'Marvel' ? 'bg-red-600' : 'bg-blue-600'
-            }`}
-            style={{
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-            }}
-          >
-            {hero.universe}
-          </span>
-        </div>
-
-        {/* HP Bar - LARGE 24px height with text inside */}
-        <div className="w-full">
-          <div
-            className="h-8 rounded-xl overflow-hidden shadow-lg relative"
-            style={{
-              background: 'linear-gradient(to bottom, rgba(30,30,40,0.9), rgba(20,20,30,0.95))',
-              border: '2px solid rgba(255,255,255,0.1)'
-            }}
-          >
-            {/* HP Fill */}
-            <div
-              className="h-full transition-all duration-700 ease-out relative"
-              style={{
-                width: `${hpPercent}%`,
-                background: hpPercent > 50
-                  ? 'linear-gradient(90deg, #4ade80, #22c55e, #16a34a)'
-                  : hpPercent > 25
-                  ? 'linear-gradient(90deg, #facc15, #eab308, #ca8a04)'
-                  : 'linear-gradient(90deg, #ef4444, #dc2626, #b91c1c)',
-                boxShadow: hpPercent > 50
-                  ? '0 0 20px rgba(74, 222, 128, 0.7), inset 0 2px 4px rgba(255,255,255,0.3)'
-                  : hpPercent > 25
-                  ? '0 0 20px rgba(250, 204, 21, 0.7), inset 0 2px 4px rgba(255,255,255,0.3)'
-                  : '0 0 20px rgba(239, 68, 68, 0.7), inset 0 2px 4px rgba(255,255,255,0.3)'
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-            </div>
-
-            {/* HP Text INSIDE Bar */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white font-black text-lg drop-shadow-lg tracking-wide">
-                {displayHp} / {displayMaxHp}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Abilities - 2x2 Grid with LARGE touch targets */}
-        <div className="grid grid-cols-2 gap-4">
-          {hero.abilities.slice(0, 4).map((ability, idx) => {
-            const statIcons = ['👊', '🔮', '⚔️', '⚡'];
-            const statColors = ['#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6'];
-            const pwrValue = Math.floor(Math.random() * 40) + 60;
-
-            return (
+        {/* GLASSMORPHISM CARD */}
+        <div
+          className="rounded-3xl p-6 relative overflow-hidden border-2"
+          style={{
+            background: `linear-gradient(135deg, rgba(15, 20, 40, 0.85), rgba(10, 15, 30, 0.90))`,
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            borderColor: `${universeColor}40`,
+            boxShadow: `0 8px 32px 0 rgba(31, 38, 135, 0.37), 0 0 60px ${universeColor}30, inset 0 0 40px ${universeColor}10`
+          }}
+        >
+          {/* Floating Damage Numbers - HUGE */}
+          {floatingDamages
+            .filter(d => d.position === position)
+            .map(({ id, damage, isCrit }) => (
               <div
-                key={idx}
-                className="group relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-2xl p-4 min-h-[100px] flex flex-col justify-between border-2 border-gray-700/50 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+                key={id}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float-up pointer-events-none z-50 font-gaming"
                 style={{
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.1)'
+                  fontSize: isCrit ? '5rem' : '4rem',
+                  fontWeight: '900',
+                  color: isCrit ? '#ff3366' : '#ff6b35',
+                  textShadow: isCrit
+                    ? '0 0 30px #ff3366, 0 0 60px #ff3366, 0 0 90px #ff3366, 0 4px 20px rgba(0,0,0,0.8)'
+                    : '0 0 20px #ff6b35, 0 0 40px #ff6b35, 0 0 60px #ff6b35, 0 4px 20px rgba(0,0,0,0.8)',
+                  animation: 'float-up 2s ease-out forwards, neon-pulse 0.5s ease-in-out'
                 }}
               >
-                {/* Icon - Large */}
-                <div className="text-4xl mb-2 transition-transform duration-200 group-hover:scale-110">
-                  {statIcons[idx]}
-                </div>
+                -{damage}
+              </div>
+            ))}
 
-                {/* Ability Name */}
-                <div className="text-sm font-bold text-gray-200 leading-tight mb-2">
-                  {ability.length > 18 ? ability.substring(0, 18) + '...' : ability}
-                </div>
+          {/* Hero Avatar - MASSIVE with NEON GLOW */}
+          <div className="text-center relative mb-4">
+            <div
+              className="inline-block transition-transform duration-500 hover:scale-110 active:scale-95 relative"
+              style={{
+                fontSize: '11rem',
+                filter: `drop-shadow(0 10px 40px ${hero.color}) drop-shadow(0 0 80px ${hero.color}80)`,
+                animation: 'float 4s ease-in-out infinite'
+              }}
+            >
+              {hero.image}
+            </div>
 
-                {/* PWR Badge - Large, bottom right */}
+            {/* Hero Name - GAMING FONT with NEON */}
+            <h3
+              className="text-4xl font-hero mt-4 mb-2 tracking-wider uppercase"
+              style={{
+                color: universeColor,
+                textShadow: `0 0 10px ${universeColor}, 0 0 20px ${universeColor}, 0 0 40px ${universeColor}`,
+                animation: 'neon-pulse 3s ease-in-out infinite'
+              }}
+            >
+              {hero.name}
+            </h3>
+
+            {/* Publisher Badge - GLOWING PILL */}
+            <div
+              className={`inline-block text-lg px-8 py-2 rounded-full font-gaming font-black uppercase tracking-widest ${
+                hero.universe === 'Marvel' ? 'bg-red-600' : 'bg-blue-600'
+              }`}
+              style={{
+                boxShadow: hero.universe === 'Marvel'
+                  ? '0 0 20px #e74c3c, 0 0 40px #e74c3c80, 0 4px 20px rgba(0,0,0,0.5)'
+                  : '0 0 20px #3498db, 0 0 40px #3498db80, 0 4px 20px rgba(0,0,0,0.5)',
+                border: `2px solid ${hero.universe === 'Marvel' ? '#ff6b6b' : '#5dade2'}`,
+              }}
+            >
+              {hero.universe}
+            </div>
+          </div>
+
+          {/* HP Bar - THICK with NEON GRADIENT */}
+          <div className="w-full mb-4">
+            <div
+              className="h-10 rounded-full overflow-hidden relative border-2 border-white/20"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(20,25,45,0.95), rgba(15,20,40,0.98))',
+                boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3)'
+              }}
+            >
+              {/* HP Fill with GRADIENT & GLOW */}
+              <div
+                className="h-full transition-all duration-1000 ease-out relative overflow-hidden"
+                style={{
+                  width: `${hpPercent}%`,
+                  background: hpPercent > 50
+                    ? 'linear-gradient(90deg, #00ff88, #00cc66, #00aa55)'
+                    : hpPercent > 25
+                    ? 'linear-gradient(90deg, #ffdd00, #ffbb00, #ff9900)'
+                    : 'linear-gradient(90deg, #ff4444, #cc0000, #aa0000)',
+                  boxShadow: hpPercent > 50
+                    ? '0 0 30px rgba(0, 255, 136, 0.8), inset 0 2px 8px rgba(255,255,255,0.4)'
+                    : hpPercent > 25
+                    ? '0 0 30px rgba(255, 221, 0, 0.8), inset 0 2px 8px rgba(255,255,255,0.4)'
+                    : '0 0 30px rgba(255, 68, 68, 0.8), inset 0 2px 8px rgba(255,255,255,0.4)'
+                }}
+              >
+                {/* Shimmer Effect */}
                 <div
-                  className="absolute bottom-3 right-3 text-xl font-black px-3 py-1 rounded-lg shadow-md"
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                  style={{ animation: 'shimmer 3s infinite' }}
+                />
+                {/* Pulsing Glow */}
+                {hpPercent < 30 && (
+                  <div
+                    className="absolute inset-0 bg-red-500/30"
+                    style={{ animation: 'pulse 1s ease-in-out infinite' }}
+                  />
+                )}
+              </div>
+
+              {/* HP Text INSIDE with CYBER FONT */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span
+                  className="text-white font-gaming font-black text-xl tracking-wider"
                   style={{
-                    background: statColors[idx],
-                    color: 'white'
+                    textShadow: '0 0 10px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.8), 0 0 20px currentColor'
                   }}
                 >
-                  {pwrValue}
-                </div>
+                  {displayHp} / {displayMaxHp}
+                </span>
               </div>
-            );
-          })}
+            </div>
+          </div>
+
+          {/* Stats Grid with NEON ICONS */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <StatIcon stat="strength" value={hero.stats.strength || 10} />
+            <StatIcon stat="speed" value={hero.stats.speed || 10} />
+            <StatIcon stat="durability" value={hero.stats.durability || 10} />
+            <StatIcon stat="combat" value={hero.stats.combat || 10} />
+          </div>
+
+          {/* Abilities - 2x2 with GLOWING BORDERS */}
+          <div className="grid grid-cols-2 gap-3">
+            {hero.abilities.slice(0, 4).map((ability, idx) => {
+              const abilityColors = ['#ff6b35', '#a855f7', '#ef4444', '#00d4ff'];
+              const pwrValue = Math.floor(Math.random() * 40) + 60;
+
+              return (
+                <div
+                  key={idx}
+                  className="group relative bg-black/60 rounded-2xl p-3 min-h-[90px] flex flex-col justify-between transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+                  style={{
+                    border: `2px solid ${abilityColors[idx]}40`,
+                    boxShadow: `0 0 20px ${abilityColors[idx]}30, inset 0 0 20px ${abilityColors[idx]}10`,
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = abilityColors[idx];
+                    e.currentTarget.style.boxShadow = `0 0 30px ${abilityColors[idx]}, inset 0 0 30px ${abilityColors[idx]}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = `${abilityColors[idx]}40`;
+                    e.currentTarget.style.boxShadow = `0 0 20px ${abilityColors[idx]}30, inset 0 0 20px ${abilityColors[idx]}10`;
+                  }}
+                >
+                  {/* Ability Name */}
+                  <div className="text-xs font-stats font-bold text-gray-200 leading-tight">
+                    {ability.length > 16 ? ability.substring(0, 16) + '...' : ability}
+                  </div>
+
+                  {/* PWR Badge - NEON */}
+                  <div
+                    className="text-2xl font-gaming font-black"
+                    style={{
+                      color: abilityColors[idx],
+                      textShadow: `0 0 10px ${abilityColors[idx]}, 0 0 20px ${abilityColors[idx]}`
+                    }}
+                  >
+                    {pwrValue}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: 'linear-gradient(to bottom, #0f0f19, #1a1a2e)' }}>
-      {/* Toast Message Overlay */}
+    <div
+      className="min-h-screen pb-24 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(to bottom, #0a0e1a, #050810)',
+      }}
+    >
+      {/* CYBER NEON BACKGROUND - Radial Gradients */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Marvel Red Glow - Top Left */}
+        <div
+          className="absolute -top-1/2 -left-1/2 w-full h-full rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(231, 76, 60, 0.15) 0%, transparent 70%)',
+            filter: 'blur(80px)'
+          }}
+        />
+        {/* DC Blue Glow - Top Right */}
+        <div
+          className="absolute -top-1/2 -right-1/2 w-full h-full rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(52, 152, 219, 0.15) 0%, transparent 70%)',
+            filter: 'blur(80px)'
+          }}
+        />
+        {/* Cyan Accent - Bottom */}
+        <div
+          className="absolute -bottom-1/2 left-1/4 w-3/4 h-full rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%)',
+            filter: 'blur(100px)'
+          }}
+        />
+      </div>
+
+      {/* Toast Message Overlay - NEON STYLE */}
       {toast && (
         <div
-          className="fixed top-4 left-4 right-4 z-50 animate-slide-down"
+          className="fixed top-6 left-4 right-4 z-50 animate-slide-down"
           style={{ maxWidth: '600px', margin: '0 auto' }}
         >
           <div
-            className="bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border-2 border-yellow-500/30"
+            className="rounded-2xl p-5 shadow-2xl border-2 border-cyan-500/50"
             style={{
-              minHeight: '80px',
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.95), rgba(10, 15, 30, 0.98))',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 0 40px rgba(0, 212, 255, 0.4), 0 8px 32px rgba(0,0,0,0.5), inset 0 0 40px rgba(0, 212, 255, 0.1)',
+              minHeight: '90px',
               display: 'flex',
               alignItems: 'center',
-              gap: '16px'
+              gap: '20px'
             }}
           >
-            {toast.icon && <span className="text-5xl">{toast.icon}</span>}
+            {toast.icon && (
+              <span
+                className="text-6xl"
+                style={{
+                  filter: 'drop-shadow(0 0 20px currentColor)',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}
+              >
+                {toast.icon}
+              </span>
+            )}
             <div className="flex-1">
-              <p className="text-white text-lg font-bold">{toast.text}</p>
+              <p className="text-white text-xl font-gaming font-bold">{toast.text}</p>
               {toast.damage && (
-                <p className="text-red-400 text-2xl font-black mt-1">-{toast.damage} HP</p>
+                <p
+                  className="text-4xl font-black font-gaming mt-2"
+                  style={{
+                    color: '#ff6b35',
+                    textShadow: '0 0 20px #ff6b35, 0 0 40px #ff6b35'
+                  }}
+                >
+                  -{toast.damage} HP
+                </p>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content - Mobile First, Max 600px */}
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        {/* Header - Minimal */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-black mb-2 flex items-center justify-center gap-3">
-            <span className="text-5xl">⚔️</span>
-            <span className="bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-400 bg-clip-text text-transparent">
-              Battle Arena
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
+        {/* Header - CYBER STYLE */}
+        <div className="text-center mb-10">
+          <h1 className="text-6xl font-gaming font-black mb-3 flex items-center justify-center gap-4">
+            <Swords
+              size={56}
+              className="text-cyan-400"
+              style={{
+                filter: 'drop-shadow(0 0 20px #00d4ff) drop-shadow(0 0 40px #00d4ff)',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}
+            />
+            <span
+              className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent"
+              style={{
+                textShadow: '0 0 40px rgba(0, 212, 255, 0.5)',
+                animation: 'neon-pulse 3s ease-in-out infinite'
+              }}
+            >
+              BATTLE ARENA
             </span>
+            <Swords
+              size={56}
+              className="text-cyan-400"
+              style={{
+                filter: 'drop-shadow(0 0 20px #00d4ff) drop-shadow(0 0 40px #00d4ff)',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}
+            />
           </h1>
-          <p className="text-base text-gray-400 font-medium">
-            200 Kämpfer • RPG-Kampfsystem
+          <p className="text-cyan-300 text-lg font-stats font-semibold tracking-wide">
+            200 KÄMPFER • RPG-KAMPFSYSTEM • CYBER NEON
           </p>
 
-          {/* Historie Button - Touch-friendly */}
+          {/* Historie Button - NEON */}
           <button
             onClick={() => setShowLogModal(true)}
-            className="mt-4 px-6 py-3 bg-slate-800/70 hover:bg-slate-700/70 active:scale-95 rounded-xl text-base text-gray-300 font-bold flex items-center gap-3 mx-auto transition-all shadow-lg"
-            style={{ minHeight: '48px' }}
+            className="mt-6 px-8 py-4 rounded-2xl text-lg font-gaming font-bold flex items-center gap-3 mx-auto transition-all active:scale-95 border-2"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.8), rgba(10, 15, 30, 0.9))',
+              backdropFilter: 'blur(10px)',
+              borderColor: '#00d4ff40',
+              color: '#00d4ff',
+              boxShadow: '0 0 30px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1)',
+              minHeight: '56px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#00d4ff';
+              e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 212, 255, 0.6), inset 0 0 30px rgba(0, 212, 255, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#00d4ff40';
+              e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1)';
+            }}
           >
-            <History size={20} />
-            Kampflog ({battleLog.length})
+            <History size={24} />
+            KAMPFLOG ({battleLog.length})
           </button>
         </div>
 
-        {/* Battle Arena - Vertical Stacking */}
-        <div className="space-y-8 mb-8">
-          {/* Fighter Panels - Vertical on Mobile */}
-          <div className="space-y-8">
-            <FighterPanel
-              hero={fighter1}
-              hp={battleState?.hp1}
-              maxHp={battleState?.maxHp1}
-              position={1}
-            />
+        {/* Battle Arena - Desktop: Side by Side, Mobile: Vertical */}
+        <div className="grid lg:grid-cols-2 gap-8 mb-10">
+          <FighterPanel
+            hero={fighter1}
+            hp={battleState?.hp1}
+            maxHp={battleState?.maxHp1}
+            position={1}
+          />
 
-            {/* VS Divider - LARGE */}
-            <div className="flex flex-col items-center justify-center py-6">
-              <div
-                className="text-7xl font-black mb-3"
-                style={{
-                  background: 'linear-gradient(180deg, #fbbf24, #f59e0b, #d97706)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 30px rgba(251, 191, 36, 0.5)',
-                  animation: 'pulse-vs 2s ease-in-out infinite'
-                }}
-              >
-                VS
-              </div>
-              {battleState && (
-                <div className="text-xl text-gray-300 font-black bg-slate-800/60 px-6 py-2 rounded-full shadow-lg">
-                  Runde {battleState.round}
-                </div>
-              )}
-            </div>
+          <FighterPanel
+            hero={fighter2}
+            hp={battleState?.hp2}
+            maxHp={battleState?.maxHp2}
+            position={2}
+          />
+        </div>
 
-            <FighterPanel
-              hero={fighter2}
-              hp={battleState?.hp2}
-              maxHp={battleState?.maxHp2}
-              position={2}
-            />
+        {/* VS Divider - MASSIVE NEON */}
+        <div className="flex flex-col items-center justify-center py-8 mb-10">
+          <div
+            className="text-9xl font-gaming font-black mb-4"
+            style={{
+              background: 'linear-gradient(180deg, #ffd700, #ff8c00, #ff6b35)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 40px rgba(255, 215, 0, 0.6)',
+              animation: 'neon-pulse 2s ease-in-out infinite, pulse 2s ease-in-out infinite',
+              filter: 'drop-shadow(0 0 60px #ffd700) drop-shadow(0 0 90px #ff8c00)'
+            }}
+          >
+            VS
           </div>
-
-          {/* Action Buttons - LARGE, Full Width, Gaming Style */}
-          <div className="space-y-4">
-            {(!battleState || !battleState.isActive) && fighter1 && fighter2 && (
-              <button
-                onClick={startBattle}
-                className="w-full rounded-2xl font-black text-2xl uppercase flex items-center justify-center gap-4 transition-all shadow-2xl active:scale-95"
-                style={{
-                  minHeight: '72px',
-                  background: 'linear-gradient(135deg, #22c55e, #16a34a, #15803d)',
-                  color: 'white',
-                  boxShadow: '0 8px 24px rgba(34, 197, 94, 0.4), inset 0 2px 4px rgba(255,255,255,0.2)'
-                }}
-              >
-                <Play size={32} fill="white" />
-                Start!
-              </button>
-            )}
-
-            {battleState?.isActive && !isAutoMode && (
-              <button
-                onClick={startAutoMode}
-                className="w-full rounded-2xl font-black text-2xl uppercase flex items-center justify-center gap-4 transition-all shadow-2xl active:scale-95"
-                style={{
-                  minHeight: '72px',
-                  background: 'linear-gradient(135deg, #9333ea, #7e22ce, #6b21a8)',
-                  color: 'white',
-                  boxShadow: '0 8px 24px rgba(147, 51, 234, 0.4), inset 0 2px 4px rgba(255,255,255,0.2)'
-                }}
-              >
-                <Play size={32} fill="white" />
-                Auto
-              </button>
-            )}
-
-            {/* Secondary Buttons - Side by Side */}
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={randomFighters}
-                disabled={battleState?.isActive}
-                className="rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{
-                  minHeight: '56px',
-                  background: battleState?.isActive
-                    ? '#4b5563'
-                    : 'linear-gradient(135deg, #a855f7, #9333ea)',
-                  color: 'white'
-                }}
-              >
-                <Shuffle size={24} />
-                Zufall
-              </button>
-
-              <button
-                onClick={clearFighters}
-                className="rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
-                style={{
-                  minHeight: '56px',
-                  background: 'linear-gradient(135deg, #4b5563, #374151)',
-                  color: 'white'
-                }}
-              >
-                <RotateCcw size={24} />
-                Reset
-              </button>
+          {battleState && (
+            <div
+              className="text-2xl font-gaming font-black px-8 py-3 rounded-full border-2"
+              style={{
+                background: 'rgba(10, 15, 30, 0.9)',
+                backdropFilter: 'blur(10px)',
+                borderColor: '#ffd70040',
+                color: '#ffd700',
+                textShadow: '0 0 20px #ffd700',
+                boxShadow: '0 0 40px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.1)'
+              }}
+            >
+              RUNDE {battleState.round}
             </div>
+          )}
+        </div>
+
+        {/* Action Buttons - CYBER GAMING STYLE */}
+        <div className="max-w-2xl mx-auto space-y-4 mb-10">
+          {(!battleState || !battleState.isActive) && fighter1 && fighter2 && (
+            <button
+              onClick={startBattle}
+              className="w-full rounded-2xl font-gaming font-black text-3xl uppercase flex items-center justify-center gap-4 transition-all active:scale-95 border-2"
+              style={{
+                minHeight: '80px',
+                background: 'linear-gradient(135deg, #00ff88, #00cc66, #00aa55)',
+                color: '#000',
+                borderColor: '#00ff88',
+                boxShadow: '0 0 50px rgba(0, 255, 136, 0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(255,255,255,0.3)'
+              }}
+            >
+              <Play size={40} fill="#000" />
+              START!
+            </button>
+          )}
+
+          {battleState?.isActive && !isAutoMode && (
+            <button
+              onClick={startAutoMode}
+              className="w-full rounded-2xl font-gaming font-black text-3xl uppercase flex items-center justify-center gap-4 transition-all active:scale-95 border-2"
+              style={{
+                minHeight: '80px',
+                background: 'linear-gradient(135deg, #a855f7, #9333ea, #7e22ce)',
+                color: '#fff',
+                borderColor: '#a855f7',
+                boxShadow: '0 0 50px rgba(168, 85, 247, 0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
+              }}
+            >
+              <Play size={40} fill="#fff" />
+              AUTO
+            </button>
+          )}
+
+          {/* Secondary Buttons */}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={randomFighters}
+              disabled={battleState?.isActive}
+              className="rounded-2xl font-gaming font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-95 border-2 disabled:opacity-40"
+              style={{
+                minHeight: '64px',
+                background: battleState?.isActive
+                  ? 'linear-gradient(135deg, #4b5563, #374151)'
+                  : 'linear-gradient(135deg, #00d4ff, #0099cc)',
+                color: '#000',
+                borderColor: battleState?.isActive ? '#4b5563' : '#00d4ff',
+                boxShadow: battleState?.isActive
+                  ? '0 4px 16px rgba(0,0,0,0.3)'
+                  : '0 0 40px rgba(0, 212, 255, 0.5), inset 0 2px 6px rgba(255,255,255,0.3)'
+              }}
+            >
+              <Shuffle size={28} />
+              ZUFALL
+            </button>
+
+            <button
+              onClick={clearFighters}
+              className="rounded-2xl font-gaming font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-95 border-2"
+              style={{
+                minHeight: '64px',
+                background: 'linear-gradient(135deg, #6b7280, #4b5563)',
+                color: '#fff',
+                borderColor: '#6b7280',
+                boxShadow: '0 0 30px rgba(107, 114, 128, 0.4), inset 0 2px 6px rgba(255,255,255,0.2)'
+              }}
+            >
+              <RotateCcw size={28} />
+              RESET
+            </button>
           </div>
         </div>
 
-        {/* Fighter Selection - Large Thumbnails */}
-        <div
-          className="rounded-2xl p-6 shadow-2xl"
-          style={{
-            background: 'linear-gradient(135deg, rgba(20, 20, 35, 0.8), rgba(30, 30, 50, 0.8))',
-            border: '2px solid rgba(100, 100, 150, 0.2)'
-          }}
-        >
-          <h3 className="text-xl font-black text-white mb-4">
-            Kämpfer wählen ({sortedHeroes.length})
-          </h3>
+        {/* Fighter Selection with Drawer */}
+        <div className="relative">
+          {/* Filter Drawer Button */}
+          <button
+            onClick={() => setShowFilterDrawer(!showFilterDrawer)}
+            className="w-full mb-4 px-6 py-4 rounded-2xl font-gaming font-bold text-xl flex items-center justify-between transition-all active:scale-95 border-2"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.9), rgba(10, 15, 30, 0.95))',
+              backdropFilter: 'blur(10px)',
+              borderColor: showFilterDrawer ? '#00d4ff' : '#00d4ff40',
+              color: '#00d4ff',
+              boxShadow: showFilterDrawer
+                ? '0 0 40px rgba(0, 212, 255, 0.6), inset 0 0 30px rgba(0, 212, 255, 0.2)'
+                : '0 0 20px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1)'
+            }}
+          >
+            <span>KÄMPFER WÄHLEN ({sortedHeroes.length})</span>
+            <ChevronDown
+              size={28}
+              className={`transition-transform duration-300 ${showFilterDrawer ? 'rotate-180' : ''}`}
+            />
+          </button>
 
-          {/* Compact Filter */}
-          <CompactFilter
-            searchTerm={filters.searchTerm}
-            universeFilter={filters.universeFilter}
-            tierFilter={filters.tierFilter}
-            heroClassFilter={filters.heroClassFilter}
-            powerTypeFilter={filters.powerTypeFilter}
-            statRanges={filters.statRanges}
-            onSearchChange={setSearchTerm}
-            onUniverseChange={setUniverseFilter}
-            onTierChange={setTierFilter}
-            onHeroClassChange={setHeroClassFilter}
-            onPowerTypeChange={setPowerTypeFilter}
-            onStatRangeChange={setStatRange}
-            onReset={resetFilters}
-            filterStats={filterStats}
-            hasActiveFilters={hasActiveFilters}
-            compact
-          />
+          {/* Filter Drawer Content */}
+          {showFilterDrawer && (
+            <div
+              className="rounded-2xl p-6 mb-4 border-2 overflow-hidden transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.95), rgba(10, 15, 30, 0.98))',
+                backdropFilter: 'blur(20px)',
+                borderColor: '#00d4ff40',
+                boxShadow: '0 0 40px rgba(0, 212, 255, 0.3), inset 0 0 40px rgba(0, 212, 255, 0.1)',
+                animation: 'slide-down 0.3s ease-out'
+              }}
+            >
+              <CompactFilter
+                searchTerm={filters.searchTerm}
+                universeFilter={filters.universeFilter}
+                tierFilter={filters.tierFilter}
+                heroClassFilter={filters.heroClassFilter}
+                powerTypeFilter={filters.powerTypeFilter}
+                statRanges={filters.statRanges}
+                onSearchChange={setSearchTerm}
+                onUniverseChange={setUniverseFilter}
+                onTierChange={setTierFilter}
+                onHeroClassChange={setHeroClassFilter}
+                onPowerTypeChange={setPowerTypeFilter}
+                onStatRangeChange={setStatRange}
+                onReset={resetFilters}
+                filterStats={filterStats}
+                hasActiveFilters={hasActiveFilters}
+                compact
+              />
+            </div>
+          )}
 
-          {/* Hero Grid - Large Touch Targets 80x80px */}
-          <div className="mt-4 overflow-x-auto -mx-6 px-6 pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-            <div className="flex gap-4">
-              {sortedHeroes.slice(0, 25).map((hero) => {
+          {/* Hero Grid - CYBER CARDS */}
+          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
+            <div className="flex gap-4 px-2">
+              {sortedHeroes.slice(0, 30).map((hero) => {
                 const isSelected = fighter1?.id === hero.id || fighter2?.id === hero.id;
                 const tierBadge = hero.tier === 'Cosmic' ? 'C' : hero.tier.charAt(0);
                 const tierColor = tierColors[hero.tier].bg;
+                const universeColor = hero.universe === 'Marvel' ? '#e74c3c' : '#3498db';
 
                 return (
                   <div
                     key={hero.id}
                     onClick={() => selectFighter(hero)}
-                    className={`relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 ${
-                      isSelected ? 'ring-4 ring-yellow-400' : ''
+                    className={`relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-300 hover:scale-110 active:scale-95 flex-shrink-0 ${
+                      isSelected ? 'ring-4 ring-cyan-400' : ''
                     }`}
                     style={{
-                      width: '110px',
-                      minHeight: '140px',
-                      background: 'linear-gradient(135deg, rgba(30, 30, 45, 0.95), rgba(20, 20, 35, 0.95))',
-                      borderTop: `5px solid ${hero.universe === 'Marvel' ? '#dc2626' : '#2563eb'}`,
+                      width: '130px',
+                      minHeight: '170px',
+                      background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.95), rgba(10, 15, 30, 0.98))',
+                      backdropFilter: 'blur(10px)',
+                      borderTop: `4px solid ${universeColor}`,
                       boxShadow: isSelected
-                        ? `0 12px 32px ${tierColor}70, 0 0 0 4px #facc15`
-                        : `0 6px 16px rgba(0,0,0,0.4)`,
+                        ? `0 0 40px ${universeColor}, 0 12px 40px rgba(0,0,0,0.5)`
+                        : `0 8px 24px rgba(0,0,0,0.4), 0 0 20px ${universeColor}30`,
                     }}
                   >
-                    {/* Tier Badge */}
+                    {/* Tier Badge - GLOWING */}
                     <div
-                      className="absolute top-2 left-2 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black z-10 shadow-lg"
+                      className="absolute top-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-gaming font-black z-10 border-2"
                       style={{
-                        background: tierColors[hero.tier].bg,
+                        background: tierColor,
                         color: tierColors[hero.tier].text,
+                        borderColor: 'rgba(255,255,255,0.3)',
+                        boxShadow: `0 0 20px ${tierColor}, 0 4px 12px rgba(0,0,0,0.4)`
                       }}
                     >
                       {tierBadge}
@@ -719,19 +950,31 @@ export default function ArenaPage() {
                       <HeroClassIcon heroClass={hero.heroClass} size="sm" />
                     </div>
 
-                    {/* Hero Avatar - LARGE */}
-                    <div className="pt-10 pb-3 text-center">
-                      <div className="text-5xl mb-2">{hero.image}</div>
-                      <div className="text-xs font-bold text-white px-2 leading-tight">
-                        {hero.name.length > 12 ? hero.name.substring(0, 12) + '...' : hero.name}
+                    {/* Hero Avatar */}
+                    <div className="pt-12 pb-4 text-center">
+                      <div
+                        className="text-6xl mb-2"
+                        style={{
+                          filter: `drop-shadow(0 0 20px ${hero.color})`
+                        }}
+                      >
+                        {hero.image}
                       </div>
-                    </div>
+                      <div className="text-xs font-stats font-bold text-white px-2 leading-tight mb-2">
+                        {hero.name.length > 14 ? hero.name.substring(0, 14) + '...' : hero.name}
+                      </div>
 
-                    {/* Publisher Badge Bottom */}
-                    <div className="absolute bottom-2 left-2 right-2 text-center">
-                      <span className={`text-xs font-black px-3 py-1 rounded-lg shadow-md ${
-                        hero.universe === 'Marvel' ? 'bg-red-600' : 'bg-blue-600'
-                      }`}>
+                      {/* Publisher Badge */}
+                      <span
+                        className={`text-xs font-gaming font-black px-3 py-1 rounded-lg ${
+                          hero.universe === 'Marvel' ? 'bg-red-600' : 'bg-blue-600'
+                        }`}
+                        style={{
+                          boxShadow: hero.universe === 'Marvel'
+                            ? '0 0 15px #e74c3c'
+                            : '0 0 15px #3498db'
+                        }}
+                      >
                         {hero.universe === 'Marvel' ? 'M' : 'DC'}
                       </span>
                     </div>
@@ -743,53 +986,73 @@ export default function ArenaPage() {
         </div>
       </div>
 
-      {/* Kampflog Modal */}
+      {/* Kampflog Modal - CYBER STYLE */}
       {showLogModal && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+          className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
           onClick={() => setShowLogModal(false)}
         >
           <div
-            className="bg-gradient-to-b from-slate-900 to-slate-800 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl"
+            className="rounded-t-3xl sm:rounded-3xl w-full sm:max-w-3xl max-h-[85vh] overflow-hidden shadow-2xl border-2"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.98), rgba(10, 15, 30, 0.99))',
+              backdropFilter: 'blur(30px)',
+              borderColor: '#00d4ff60',
+              boxShadow: '0 0 60px rgba(0, 212, 255, 0.4), 0 20px 80px rgba(0,0,0,0.6)'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag Handle */}
-            <div className="flex justify-center pt-3 pb-2 sm:hidden">
-              <div className="w-12 h-1.5 bg-gray-600 rounded-full"></div>
+            <div className="flex justify-center pt-4 pb-2 sm:hidden">
+              <div className="w-16 h-2 bg-cyan-500/50 rounded-full"></div>
             </div>
 
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-700">
-              <h2 className="text-2xl font-black text-white">📜 Kampflog</h2>
+            <div className="px-8 py-6 border-b border-cyan-500/30">
+              <h2 className="text-4xl font-gaming font-black text-cyan-400 flex items-center gap-4">
+                <History size={36} />
+                KAMPFLOG
+              </h2>
             </div>
 
             {/* Log Content */}
             <div
               ref={logRef}
-              className="overflow-y-auto p-6 space-y-3"
-              style={{ maxHeight: 'calc(80vh - 120px)' }}
+              className="overflow-y-auto p-8 space-y-4"
+              style={{ maxHeight: 'calc(85vh - 200px)' }}
             >
               {battleLog.length === 0 ? (
-                <p className="text-gray-500 text-center py-12">
-                  Noch keine Kämpfe...
+                <p className="text-cyan-400/60 text-center py-16 text-xl font-gaming">
+                  NOCH KEINE KÄMPFE...
                 </p>
               ) : (
                 battleLog.map((entry, idx) => (
                   <div
                     key={idx}
-                    className={`px-5 py-4 rounded-2xl transition-all shadow-lg ${
+                    className={`px-6 py-5 rounded-2xl transition-all border-2 ${
                       entry.type === 'start'
-                        ? 'bg-blue-900/40 text-blue-200 border-l-4 border-blue-400'
+                        ? 'bg-blue-900/40 text-blue-200 border-blue-400/50'
                         : entry.type === 'end'
-                        ? 'bg-yellow-900/40 text-yellow-200 font-bold border-l-4 border-yellow-400'
-                        : 'bg-slate-800/60 text-gray-300 border-l-4 border-red-500/50'
+                        ? 'bg-yellow-900/40 text-yellow-200 font-bold border-yellow-400/50'
+                        : 'bg-slate-800/60 text-gray-300 border-red-500/40'
                     }`}
+                    style={{
+                      boxShadow: entry.type === 'end'
+                        ? '0 0 30px rgba(250, 204, 21, 0.4)'
+                        : '0 4px 20px rgba(0,0,0,0.3)'
+                    }}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-base">{entry.text}</span>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-lg font-stats">{entry.text}</span>
                       {entry.damage && (
-                        <span className="text-red-400 font-black text-xl">
-                          -{entry.damage} HP
+                        <span
+                          className="font-gaming font-black text-2xl"
+                          style={{
+                            color: '#ff6b35',
+                            textShadow: '0 0 20px #ff6b35'
+                          }}
+                        >
+                          -{entry.damage}
                         </span>
                       )}
                     </div>
@@ -799,13 +1062,19 @@ export default function ArenaPage() {
             </div>
 
             {/* Close Button */}
-            <div className="px-6 py-4 border-t border-gray-700">
+            <div className="px-8 py-6 border-t border-cyan-500/30">
               <button
                 onClick={() => setShowLogModal(false)}
-                className="w-full rounded-xl font-bold text-lg py-4 bg-slate-700 hover:bg-slate-600 active:scale-95 transition-all"
-                style={{ minHeight: '56px' }}
+                className="w-full rounded-2xl font-gaming font-bold text-xl py-5 transition-all active:scale-95 border-2 flex items-center justify-center gap-3"
+                style={{
+                  background: 'linear-gradient(135deg, #6b7280, #4b5563)',
+                  borderColor: '#6b7280',
+                  color: '#fff',
+                  boxShadow: '0 0 30px rgba(107, 114, 128, 0.4)'
+                }}
               >
-                Schließen
+                <X size={24} />
+                SCHLIESSEN
               </button>
             </div>
           </div>
@@ -814,49 +1083,19 @@ export default function ArenaPage() {
 
       {/* Custom Animations */}
       <style>{`
-        @keyframes pulse-vs {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
-        }
-
-        .animate-shake {
-          animation: shake 0.2s ease-in-out;
-        }
-
         @keyframes float-up {
           0% {
             opacity: 1;
-            transform: translate(-50%, 0);
+            transform: translate(-50%, -50%) scale(0.5);
+          }
+          50% {
+            opacity: 1;
+            transform: translate(-50%, -150%) scale(1.2);
           }
           100% {
             opacity: 0;
-            transform: translate(-50%, -80px);
+            transform: translate(-50%, -250%) scale(0.8);
           }
-        }
-
-        .animate-float-up {
-          animation: float-up 1.5s ease-out forwards;
-        }
-
-        @keyframes slide-down {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-slide-down {
-          animation: slide-down 0.3s ease-out;
         }
 
         @keyframes shimmer {
@@ -864,28 +1103,29 @@ export default function ArenaPage() {
           100% { transform: translateX(200%); }
         }
 
-        .animate-shimmer {
-          animation: shimmer 2.5s infinite;
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
 
-        /* Touch-friendly scrollbar */
+        /* Custom scrollbar */
         .scrollbar-thin::-webkit-scrollbar {
-          height: 8px;
-          width: 8px;
+          height: 10px;
+          width: 10px;
         }
 
         .scrollbar-thin::-webkit-scrollbar-track {
-          background: rgba(15, 23, 42, 0.3);
-          border-radius: 4px;
+          background: rgba(15, 23, 42, 0.4);
+          border-radius: 5px;
         }
 
         .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: rgba(71, 85, 105, 0.6);
-          border-radius: 4px;
+          background: rgba(0, 212, 255, 0.5);
+          border-radius: 5px;
         }
 
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-          background: rgba(71, 85, 105, 0.8);
+          background: rgba(0, 212, 255, 0.7);
         }
       `}</style>
     </div>
