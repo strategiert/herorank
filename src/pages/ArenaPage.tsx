@@ -87,7 +87,21 @@ export default function ArenaPage() {
   }, []);
 
   const calculateHP = (hero: Hero) => {
-    return Math.round((hero.stats.durability * 15) + (hero.stats.strength * 5) + (hero.power * 2));
+    // Handle 0-values: use minimum of 10 for missing stats
+    const effectiveDurability = hero.stats.durability || 10;
+    const effectiveStrength = hero.stats.strength || 10;
+
+    // Calculate base HP
+    const baseHP = Math.round(
+      (effectiveDurability * 15) +
+      (effectiveStrength * 5) +
+      (hero.power * 3)
+    );
+
+    // Guarantee minimum HP based on tier/power
+    const minHP = hero.power >= 90 ? 2000 : hero.power >= 70 ? 1500 : hero.power >= 50 ? 1000 : 500;
+
+    return Math.max(baseHP, minHP);
   };
 
   const getAbilityPower = (hero: Hero, abilityIndex: number) => {
