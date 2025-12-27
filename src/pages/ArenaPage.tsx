@@ -70,10 +70,47 @@ export default function ArenaPage() {
   const [showLogModal, setShowLogModal] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
+  const [showShopModal, setShowShopModal] = useState(false);
+  const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
+  const [newlyUnlockedHero, setNewlyUnlockedHero] = useState<Hero | null>(null);
+
+  // UNLOCK SYSTEM - Start with Iron Man (151) and Batman (361)
+  const [unlockedHeroIds, setUnlockedHeroIds] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem('herorank_unlocked');
+    if (saved) {
+      return new Set(JSON.parse(saved));
+    }
+    // Default starters: Iron Man and Batman
+    return new Set([151, 361]);
+  });
+
   const [totalCoins, setTotalCoins] = useState(() => {
     const saved = localStorage.getItem('herorank_coins');
     return saved ? parseInt(saved, 10) : 0;
   });
+
+  // PITY SYSTEM - Guaranteed S-Tier every 15 lootboxes
+  const [pityCounter, setPityCounter] = useState(() => {
+    const saved = localStorage.getItem('herorank_pity');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // DAILY LOGIN BONUS
+  const [dailyBonusClaimed, setDailyBonusClaimed] = useState(false);
+  const [showDailyBonus, setShowDailyBonus] = useState(false);
+  const [loginStreak, setLoginStreak] = useState(() => {
+    const saved = localStorage.getItem('herorank_streak');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // ACHIEVEMENTS SYSTEM
+  const [achievements, setAchievements] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('herorank_achievements');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [newAchievement, setNewAchievement] = useState<any>(null);
+
   const logRef = useRef<HTMLDivElement>(null);
   const autoIntervalRef = useRef<number | null>(null);
 
@@ -110,6 +147,302 @@ export default function ArenaPage() {
       }
     };
   }, []);
+
+  // Save unlocked heroes to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('herorank_unlocked', JSON.stringify(Array.from(unlockedHeroIds)));
+  }, [unlockedHeroIds]);
+
+  // Save pity counter to localStorage
+  useEffect(() => {
+    localStorage.setItem('herorank_pity', pityCounter.toString());
+  }, [pityCounter]);
+
+  // Save achievements to localStorage
+  useEffect(() => {
+    localStorage.setItem('herorank_achievements', JSON.stringify(achievements));
+  }, [achievements]);
+
+  // Save login streak to localStorage
+  useEffect(() => {
+    localStorage.setItem('herorank_streak', loginStreak.toString());
+  }, [loginStreak]);
+
+  // ACHIEVEMENT DEFINITIONS
+  const achievementDefs = {
+    first_win: { name: 'Erster Sieg!', desc: 'Gewinne deinen ersten Kampf', reward: 50, icon: '🏆' },
+    win_10: { name: 'Kämpfer', desc: 'Gewinne 10 Kämpfe', reward: 100, icon: '⚔️' },
+    win_50: { name: 'Krieger', desc: 'Gewinne 50 Kämpfe', reward: 500, icon: '🗡️' },
+    unlock_10: { name: 'Sammler', desc: 'Schalte 10 Helden frei', reward: 100, icon: '📚' },
+    unlock_50: { name: 'Meistersammler', desc: 'Schalte 50 Helden frei', reward: 500, icon: '✨' },
+    unlock_all_marvel: { name: 'Marvel Fan', desc: 'Schalte alle Marvel Helden frei', reward: 1000, icon: '🦸' },
+    unlock_all_dc: { name: 'DC Fan', desc: 'Schalte alle DC Helden frei', reward: 1000, icon: '🦇' },
+    unlock_s_tier: { name: 'Elite Held', desc: 'Schalte einen S-Tier Helden frei', reward: 200, icon: '⭐' },
+    ultimate_10: { name: 'Ultimate Meister', desc: 'Nutze 10x Ultimate Attacks', reward: 150, icon: '💥' },
+    daily_7: { name: 'Treuer Spieler', desc: '7 Tage Streak', reward: 300, icon: '🔥' },
+  };
+
+  // Check and award achievements
+  const checkAchievement = (achievementId: string) => {
+    if (!achievements[achievementId]) {
+      const achievement = achievementDefs[achievementId as keyof typeof achievementDefs];
+      if (!achievement) return;
+
+      // Award achievement
+      setAchievements(prev => ({ ...prev, [achievementId]: true }));
+
+      // Award coins
+      const newCoins = totalCoins + achievement.reward;
+      setTotalCoins(newCoins);
+      localStorage.setItem('herorank_coins', newCoins.toString());
+
+      // Show notification
+      setNewAchievement({ id: achievementId, ...achievement });
+      setShowAchievement(true);
+
+      setTimeout(() => {
+        setShowAchievement(false);
+        setNewAchievement(null);
+      }, 4000);
+    }
+  };
+
+  // Daily Login Bonus Check
+  useEffect(() => {
+    const lastLogin = localStorage.getItem('herorank_last_login');
+    const today = new Date().toDateString();
+
+    if (lastLogin !== today) {
+      // New day!
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toDateString();
+
+      // Check if streak continues
+      if (lastLogin === yesterdayStr) {
+        setLoginStreak(prev => prev + 1);
+      } else if (lastLogin !== null) {
+        // Streak broken, reset
+        setLoginStreak(1);
+      } else {
+        // First time
+        setLoginStreak(1);
+      }
+
+      localStorage.setItem('herorank_last_login', today);
+      setShowDailyBonus(true);
+      setDailyBonusClaimed(false);
+    } else {
+      setDailyBonusClaimed(true);
+    }
+  }, []);
+
+  // Claim daily bonus
+  const claimDailyBonus = () => {
+    const baseBonus = 50;
+    const streakBonus = Math.min(loginStreak * 10, 100); // Max +100
+    const totalBonus = baseBonus + streakBonus;
+
+    const newCoins = totalCoins + totalBonus;
+    setTotalCoins(newCoins);
+    localStorage.setItem('herorank_coins', newCoins.toString());
+
+    setDailyBonusClaimed(true);
+    setShowDailyBonus(false);
+
+    showToast(`Daily Bonus: +${totalBonus} Coins!`, undefined, '🎁');
+
+    // Check streak achievement
+    if (loginStreak >= 7) {
+      checkAchievement('daily_7');
+    }
+  };
+
+  // UNLOCK FUNCTIONS
+  const unlockHero = (heroId: number) => {
+    setUnlockedHeroIds(prev => {
+      const newSet = new Set(prev);
+      newSet.add(heroId);
+      return newSet;
+    });
+  };
+
+  const openLootbox = () => {
+    const LOOTBOX_COST = 100;
+
+    if (totalCoins < LOOTBOX_COST) {
+      showToast('Nicht genug Coins! Brauche 100 Coins.', undefined, '💰');
+      return;
+    }
+
+    // Get all locked heroes
+    const lockedHeroes = superheroes.filter(h => !unlockedHeroIds.has(h.id));
+
+    if (lockedHeroes.length === 0) {
+      showToast('Alle Helden bereits freigeschaltet! 🎉', undefined, '✨');
+      return;
+    }
+
+    // Deduct coins
+    const newCoins = totalCoins - LOOTBOX_COST;
+    setTotalCoins(newCoins);
+    localStorage.setItem('herorank_coins', newCoins.toString());
+
+    // PITY SYSTEM - Guaranteed S-Tier or higher every 15 lootboxes
+    const newPityCount = pityCounter + 1;
+    let randomHero: Hero;
+
+    if (newPityCount >= 15) {
+      // GUARANTEED S-TIER OR COSMIC!
+      const sTierOrBetter = lockedHeroes.filter(h => h.tier === 'S' || h.tier === 'Cosmic');
+
+      if (sTierOrBetter.length > 0) {
+        randomHero = sTierOrBetter[Math.floor(Math.random() * sTierOrBetter.length)];
+        showToast('🎉 PITY SYSTEM! Garantierter S-Tier+!', undefined, '⭐');
+      } else {
+        // Fallback if all S-Tier are unlocked
+        randomHero = lockedHeroes[Math.floor(Math.random() * lockedHeroes.length)];
+      }
+
+      // Reset pity counter
+      setPityCounter(0);
+    } else {
+      // Normal weighted random
+      const weightedHeroes = lockedHeroes.flatMap(hero => {
+        const weight = hero.tier === 'Cosmic' ? 1 : hero.tier === 'S' ? 1 : hero.tier === 'A' ? 3 : hero.tier === 'B' ? 5 : 7;
+        return Array(weight).fill(hero);
+      });
+
+      randomHero = weightedHeroes[Math.floor(Math.random() * weightedHeroes.length)];
+
+      // Increment pity counter
+      setPityCounter(newPityCount);
+    }
+
+    // Unlock the hero
+    unlockHero(randomHero.id);
+
+    // Check achievements
+    if (randomHero.tier === 'S' || randomHero.tier === 'Cosmic') {
+      checkAchievement('unlock_s_tier');
+    }
+    if (unlockedHeroIds.size + 1 >= 10) checkAchievement('unlock_10');
+    if (unlockedHeroIds.size + 1 >= 50) checkAchievement('unlock_50');
+
+    // Check universe-specific achievements
+    const marvelHeroes = superheroes.filter(h => h.universe === 'Marvel');
+    const dcHeroes = superheroes.filter(h => h.universe === 'DC');
+    const unlockedMarvel = marvelHeroes.filter(h => unlockedHeroIds.has(h.id) || h.id === randomHero.id);
+    const unlockedDC = dcHeroes.filter(h => unlockedHeroIds.has(h.id) || h.id === randomHero.id);
+
+    if (unlockedMarvel.length === marvelHeroes.length) checkAchievement('unlock_all_marvel');
+    if (unlockedDC.length === dcHeroes.length) checkAchievement('unlock_all_dc');
+
+    // Play sound effect
+    playSound('lootbox');
+
+    // Show unlock animation
+    setNewlyUnlockedHero(randomHero);
+    setShowUnlockAnimation(true);
+    setShowShopModal(false);
+
+    // Auto-close unlock animation after 4 seconds
+    setTimeout(() => {
+      setShowUnlockAnimation(false);
+      setNewlyUnlockedHero(null);
+    }, 4000);
+  };
+
+  // SOUND EFFECTS SYSTEM
+  const playSound = (type: 'coin' | 'lootbox' | 'unlock' | 'hit' | 'ultimate' | 'victory') => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Different sounds for different events
+      switch (type) {
+        case 'coin':
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+          break;
+        case 'lootbox':
+          // Rising tone for lootbox open
+          oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.3);
+          oscillator.type = 'triangle';
+          gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.3);
+          break;
+        case 'unlock':
+          // Fanfare for unlock
+          oscillator.frequency.value = 600;
+          oscillator.type = 'square';
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.5);
+          // Second note
+          setTimeout(() => {
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            osc2.frequency.value = 800;
+            osc2.type = 'square';
+            gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            osc2.start(audioContext.currentTime);
+            osc2.stop(audioContext.currentTime + 0.5);
+          }, 150);
+          break;
+        case 'hit':
+          oscillator.frequency.value = 150;
+          oscillator.type = 'sawtooth';
+          gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+          break;
+        case 'ultimate':
+          // Powerful ultimate sound
+          oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(1000, audioContext.currentTime + 0.4);
+          oscillator.type = 'sawtooth';
+          gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.4);
+          break;
+        case 'victory':
+          // Victory fanfare
+          oscillator.frequency.value = 523; // C5
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.6);
+          break;
+      }
+    } catch (e) {
+      // Silently fail if Web Audio API not supported
+      console.log('Sound not supported');
+    }
+  };
+
+  // Filter to only show unlocked heroes
+  const unlockedHeroes = sortedHeroes.filter(h => unlockedHeroIds.has(h.id));
+  const allHeroesCount = superheroes.length;
+  const unlockedCount = unlockedHeroIds.size;
 
   const calculateHP = (hero: Hero) => {
     // NEW: Much simpler HP for faster battles (6-8 rounds)
@@ -314,6 +647,13 @@ export default function ArenaPage() {
       addFloatingDamage(damage1, 2, playerAction === 'ultimate');
       showToast(`${fighter1.name}: ${actionNames[playerAction]}!`, damage1, fighter1.image);
 
+      // Play sound based on action
+      if (playerAction === 'ultimate') {
+        playSound('ultimate');
+      } else {
+        playSound('hit');
+      }
+
       newLog.push({
         text: `${fighter1.name} nutzt ${actionNames[playerAction]}! ${damage1} Schaden!`,
         type: playerAction === 'ultimate' ? 'special' : 'attack',
@@ -337,6 +677,21 @@ export default function ArenaPage() {
       const newTotalCoins = totalCoins + coinsEarned;
       setTotalCoins(newTotalCoins);
       localStorage.setItem('herorank_coins', newTotalCoins.toString());
+
+      // Track battle wins for achievements
+      const winsKey = 'herorank_wins';
+      const currentWins = parseInt(localStorage.getItem(winsKey) || '0', 10);
+      const newWins = currentWins + 1;
+      localStorage.setItem(winsKey, newWins.toString());
+
+      // Check win achievements
+      if (newWins === 1) checkAchievement('first_win');
+      if (newWins === 10) checkAchievement('win_10');
+      if (newWins === 50) checkAchievement('win_50');
+
+      // Play victory sound
+      playSound('victory');
+      setTimeout(() => playSound('coin'), 300);
 
       setBattleState({
         ...battleState,
@@ -1089,6 +1444,45 @@ export default function ArenaPage() {
         {/* Fighter Selection with Drawer */}
         <div className="relative">
           {/* Filter Drawer Button */}
+          {/* Hero Collection Progress */}
+          <div className="mb-4 text-center">
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full border-2"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 153, 204, 0.1))',
+                backdropFilter: 'blur(10px)',
+                borderColor: '#00d4ff60',
+                boxShadow: '0 0 30px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1)'
+              }}
+            >
+              <span className="text-2xl">📚</span>
+              <span className="text-xl font-gaming font-black text-cyan-400">
+                {unlockedCount}/{allHeroesCount} HELDEN
+              </span>
+            </div>
+          </div>
+
+          {/* Shop Button */}
+          <button
+            onClick={() => setShowShopModal(true)}
+            disabled={battleState?.isActive}
+            className="w-full mb-4 px-6 py-5 rounded-2xl font-gaming font-black text-2xl flex items-center justify-center gap-4 transition-all active:scale-95 hover:scale-105 border-2 disabled:opacity-40"
+            style={{
+              background: battleState?.isActive
+                ? 'linear-gradient(135deg, #4b5563, #374151)'
+                : 'linear-gradient(135deg, #ffd700, #ff8c00)',
+              color: battleState?.isActive ? '#6b7280' : '#000',
+              borderColor: battleState?.isActive ? '#4b5563' : '#ffd700',
+              boxShadow: battleState?.isActive
+                ? '0 4px 16px rgba(0,0,0,0.3)'
+                : '0 0 50px rgba(255, 215, 0, 0.7), inset 0 2px 8px rgba(255,255,255,0.3)',
+              animation: battleState?.isActive ? 'none' : 'pulse 2s ease-in-out infinite'
+            }}
+          >
+            <span className="text-4xl">🎁</span>
+            <span>SHOP - LOOTBOX</span>
+            <span className="text-lg font-stats">(100 Coins)</span>
+          </button>
+
           <button
             onClick={() => setShowFilterDrawer(!showFilterDrawer)}
             className="w-full mb-4 px-6 py-4 rounded-2xl font-gaming font-bold text-xl flex items-center justify-between transition-all active:scale-95 border-2"
@@ -1102,7 +1496,7 @@ export default function ArenaPage() {
                 : '0 0 20px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1)'
             }}
           >
-            <span>KÄMPFER WÄHLEN ({sortedHeroes.length})</span>
+            <span>FREIGESCHALTETE KÄMPFER ({unlockedHeroes.length})</span>
             <ChevronDown
               size={28}
               className={`transition-transform duration-300 ${showFilterDrawer ? 'rotate-180' : ''}`}
@@ -1142,10 +1536,10 @@ export default function ArenaPage() {
             </div>
           )}
 
-          {/* Hero Grid - CYBER CARDS */}
+          {/* Hero Grid - CYBER CARDS (UNLOCKED ONLY) */}
           <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
             <div className="flex gap-4 px-2">
-              {sortedHeroes.slice(0, 30).map((hero) => {
+              {unlockedHeroes.slice(0, 30).map((hero) => {
                 const isSelected = fighter1?.id === hero.id || fighter2?.id === hero.id;
                 const tierBadge = hero.tier === 'Cosmic' ? 'C' : hero.tier.charAt(0);
                 const tierColor = tierColors[hero.tier].bg;
@@ -1440,6 +1834,419 @@ export default function ArenaPage() {
         </div>
       )}
 
+      {/* SHOP MODAL - LOOTBOX */}
+      {showShopModal && (
+        <div
+          className="fixed inset-0 bg-black/95 backdrop-blur-lg z-50 flex items-center justify-center p-6"
+          onClick={() => setShowShopModal(false)}
+        >
+          <div
+            className="rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.98), rgba(10, 15, 30, 0.99))',
+              backdropFilter: 'blur(30px)',
+              borderColor: '#ffd700',
+              boxShadow: '0 0 100px rgba(255, 215, 0, 0.8), 0 20px 80px rgba(0,0,0,0.6)',
+              animation: 'float 3s ease-in-out infinite'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-8 py-10 text-center border-b border-yellow-500/30">
+              <div className="text-9xl mb-4 animate-bounce">🎁</div>
+              <h2
+                className="text-6xl font-gaming font-black mb-4"
+                style={{
+                  background: 'linear-gradient(180deg, #ffd700, #ff8c00)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 40px rgba(255, 215, 0, 0.6)',
+                  animation: 'neon-pulse 2s ease-in-out infinite'
+                }}
+              >
+                LOOTBOX SHOP
+              </h2>
+              <p className="text-cyan-300 text-xl font-stats">
+                Schalte neue Helden frei!
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="px-8 py-8">
+              {/* Current Status */}
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-black/40 rounded-2xl p-6 border-2 border-cyan-500/30">
+                  <div className="text-cyan-400 font-gaming text-lg mb-2">Deine Coins</div>
+                  <div className="text-5xl font-gaming font-black text-yellow-400 flex items-center gap-3">
+                    <span>💰</span>
+                    <span>{totalCoins}</span>
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-2xl p-6 border-2 border-purple-500/30">
+                  <div className="text-purple-400 font-gaming text-lg mb-2">Sammlung</div>
+                  <div className="text-5xl font-gaming font-black text-purple-400 flex items-center gap-3">
+                    <span>📚</span>
+                    <span>{unlockedCount}/{allHeroesCount}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lootbox Price */}
+              <div className="mb-8 text-center">
+                <div className="inline-block bg-gradient-to-r from-yellow-600/20 to-orange-600/20 rounded-2xl px-8 py-6 border-2 border-yellow-500"
+                  style={{
+                    boxShadow: '0 0 40px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(255, 215, 0, 0.1)'
+                  }}
+                >
+                  <div className="text-yellow-400 font-gaming text-2xl mb-2">1 LOOTBOX</div>
+                  <div className="text-6xl font-gaming font-black text-yellow-400">100 💰</div>
+                  <div className="text-gray-400 font-stats text-sm mt-2">Random Hero Unlock</div>
+                </div>
+              </div>
+
+              {/* Rarity Info */}
+              <div className="bg-black/40 rounded-2xl p-6 mb-6 border border-white/10">
+                <div className="text-center text-cyan-400 font-gaming mb-4">DROP RATES:</div>
+                <div className="grid grid-cols-2 gap-3 text-sm font-stats">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Cosmic/S-Tier:</span>
+                    <span className="text-red-400 font-bold">Sehr selten</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">A-Tier:</span>
+                    <span className="text-orange-400 font-bold">Selten</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">B-Tier:</span>
+                    <span className="text-yellow-400 font-bold">Häufig</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">C/D-Tier:</span>
+                    <span className="text-green-400 font-bold">Sehr häufig</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* PITY COUNTER */}
+              <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 rounded-2xl p-6 mb-6 border-2 border-purple-500"
+                style={{
+                  boxShadow: '0 0 40px rgba(168, 85, 247, 0.4), inset 0 0 30px rgba(168, 85, 247, 0.1)'
+                }}
+              >
+                <div className="text-center">
+                  <div className="text-purple-400 font-gaming text-lg mb-2">⭐ PITY SYSTEM ⭐</div>
+                  <div className="text-3xl font-gaming font-black text-yellow-400 mb-2">
+                    {15 - pityCounter} Lootboxen bis S-Tier!
+                  </div>
+                  <div className="w-full bg-black/40 rounded-full h-6 overflow-hidden border border-purple-500/30">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                      style={{
+                        width: `${(pityCounter / 15) * 100}%`,
+                        boxShadow: '0 0 20px rgba(168, 85, 247, 0.8)'
+                      }}
+                    />
+                  </div>
+                  <div className="text-gray-400 font-stats text-sm mt-2">
+                    Progress: {pityCounter}/15
+                  </div>
+                </div>
+              </div>
+
+              {/* Open Button */}
+              <button
+                onClick={openLootbox}
+                disabled={totalCoins < 100}
+                className="w-full rounded-2xl font-gaming font-black text-3xl py-8 transition-all active:scale-95 hover:scale-105 border-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
+                style={{
+                  background: totalCoins >= 100
+                    ? 'linear-gradient(135deg, #ffd700, #ff8c00, #ff6b35)'
+                    : 'linear-gradient(135deg, #4b5563, #374151)',
+                  borderColor: totalCoins >= 100 ? '#ffd700' : '#4b5563',
+                  color: '#fff',
+                  boxShadow: totalCoins >= 100
+                    ? '0 0 60px rgba(255, 215, 0, 0.9), inset 0 2px 8px rgba(255,255,255,0.3)'
+                    : '0 4px 16px rgba(0,0,0,0.3)',
+                  animation: totalCoins >= 100 ? 'pulse 2s ease-in-out infinite' : 'none'
+                }}
+              >
+                {totalCoins >= 100 ? '🎁 ÖFFNEN! 🎁' : '❌ NICHT GENUG COINS'}
+              </button>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowShopModal(false)}
+                className="w-full mt-4 rounded-2xl font-gaming font-bold text-xl py-5 transition-all active:scale-95 border-2"
+                style={{
+                  background: 'linear-gradient(135deg, #6b7280, #4b5563)',
+                  borderColor: '#6b7280',
+                  color: '#fff',
+                  boxShadow: '0 0 30px rgba(107, 114, 128, 0.4)'
+                }}
+              >
+                SCHLIEẞEN
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UNLOCK ANIMATION */}
+      {showUnlockAnimation && newlyUnlockedHero && (
+        <div
+          className="fixed inset-0 bg-black/98 backdrop-blur-xl z-50 flex items-center justify-center p-6"
+          style={{
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+        >
+          <div
+            className="text-center"
+            style={{
+              animation: 'float 3s ease-in-out infinite'
+            }}
+          >
+            {/* NEW HERO! Text */}
+            <div
+              className="text-8xl font-gaming font-black mb-8"
+              style={{
+                background: 'linear-gradient(180deg, #ffd700, #ff8c00, #ff6b35)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 80px rgba(255, 215, 0, 0.8)',
+                animation: 'neon-pulse 1s ease-in-out infinite, scaleUp 0.5s ease-out'
+              }}
+            >
+              NEUER HELD!
+            </div>
+
+            {/* Hero Display */}
+            <div
+              className="rounded-3xl p-12 mb-8 border-4"
+              style={{
+                background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.95), rgba(10, 15, 30, 0.98))',
+                borderColor: newlyUnlockedHero.universe === 'Marvel' ? '#e74c3c' : '#3498db',
+                boxShadow: `0 0 100px ${newlyUnlockedHero.universe === 'Marvel' ? '#e74c3c' : '#3498db'}, 0 20px 80px rgba(0,0,0,0.6)`,
+                animation: 'scaleUp 0.5s ease-out'
+              }}
+            >
+              {/* Hero Image */}
+              <div
+                className="text-9xl mb-6"
+                style={{
+                  filter: `drop-shadow(0 20px 60px ${newlyUnlockedHero.color})`,
+                  animation: 'float 2s ease-in-out infinite'
+                }}
+              >
+                {newlyUnlockedHero.image}
+              </div>
+
+              {/* Hero Name */}
+              <h2
+                className="text-6xl font-hero mb-4 uppercase"
+                style={{
+                  color: newlyUnlockedHero.universe === 'Marvel' ? '#e74c3c' : '#3498db',
+                  textShadow: `0 0 30px ${newlyUnlockedHero.universe === 'Marvel' ? '#e74c3c' : '#3498db'}`,
+                  animation: 'neon-pulse 2s ease-in-out infinite'
+                }}
+              >
+                {newlyUnlockedHero.name}
+              </h2>
+
+              {/* Tier Badge */}
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div
+                  className="px-8 py-4 rounded-full font-gaming font-black text-2xl"
+                  style={{
+                    background: tierColors[newlyUnlockedHero.tier].bg,
+                    color: tierColors[newlyUnlockedHero.tier].text,
+                    boxShadow: `0 0 40px ${tierColors[newlyUnlockedHero.tier].bg}`,
+                    border: '2px solid rgba(255,255,255,0.3)'
+                  }}
+                >
+                  {newlyUnlockedHero.tier} TIER
+                </div>
+                <div
+                  className="px-8 py-4 rounded-full font-gaming font-black text-2xl"
+                  style={{
+                    background: newlyUnlockedHero.universe === 'Marvel' ? '#e74c3c' : '#3498db',
+                    color: '#fff',
+                    boxShadow: `0 0 40px ${newlyUnlockedHero.universe === 'Marvel' ? '#e74c3c' : '#3498db'}`,
+                    border: '2px solid rgba(255,255,255,0.3)'
+                  }}
+                >
+                  {newlyUnlockedHero.universe}
+                </div>
+              </div>
+
+              {/* Power */}
+              <div className="text-4xl font-gaming font-black text-yellow-400">
+                ⚡ POWER: {newlyUnlockedHero.power}
+              </div>
+            </div>
+
+            {/* Confetti Effect */}
+            <div className="text-7xl animate-bounce">
+              🎉 ✨ 🎊 ⭐ 🌟
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DAILY BONUS MODAL */}
+      {showDailyBonus && !dailyBonusClaimed && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-lg z-50 flex items-center justify-center p-6">
+          <div
+            className="rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.98), rgba(10, 15, 30, 0.99))',
+              backdropFilter: 'blur(30px)',
+              borderColor: '#ffd700',
+              boxShadow: '0 0 100px rgba(255, 215, 0, 0.8), 0 20px 80px rgba(0,0,0,0.6)',
+              animation: 'scaleUp 0.5s ease-out, float 3s ease-in-out infinite'
+            }}
+          >
+            {/* Header */}
+            <div className="px-8 py-10 text-center border-b border-yellow-500/30">
+              <div className="text-9xl mb-4 animate-bounce">🎁</div>
+              <h2
+                className="text-6xl font-gaming font-black mb-4"
+                style={{
+                  background: 'linear-gradient(180deg, #ffd700, #ff8c00)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 40px rgba(255, 215, 0, 0.6)',
+                  animation: 'neon-pulse 2s ease-in-out infinite'
+                }}
+              >
+                DAILY BONUS!
+              </h2>
+              <p className="text-cyan-300 text-xl font-stats">
+                Willkommen zurück!
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="px-8 py-8">
+              {/* Streak Display */}
+              <div className="text-center mb-6">
+                <div className="inline-block bg-gradient-to-r from-orange-600/20 to-red-600/20 rounded-2xl px-8 py-6 border-2 border-orange-500 mb-4"
+                  style={{
+                    boxShadow: '0 0 40px rgba(255, 140, 0, 0.4), inset 0 0 30px rgba(255, 140, 0, 0.1)'
+                  }}
+                >
+                  <div className="text-orange-400 font-gaming text-xl mb-2">🔥 LOGIN STREAK</div>
+                  <div className="text-7xl font-gaming font-black text-orange-400">{loginStreak}</div>
+                  <div className="text-gray-400 font-stats text-sm mt-2">
+                    {loginStreak === 1 ? 'Tag' : 'Tage'} in Folge
+                  </div>
+                </div>
+
+                {/* Bonus Calculation */}
+                <div className="bg-black/40 rounded-2xl p-6 border border-white/10">
+                  <div className="text-cyan-400 font-gaming text-lg mb-4">BELOHNUNG:</div>
+                  <div className="space-y-2 text-left font-stats">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Basis Bonus:</span>
+                      <span className="text-yellow-400 font-bold">+50 Coins</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Streak Bonus:</span>
+                      <span className="text-orange-400 font-bold">+{Math.min(loginStreak * 10, 100)} Coins</span>
+                    </div>
+                    <div className="border-t border-white/10 my-2"></div>
+                    <div className="flex justify-between text-xl">
+                      <span className="text-white font-bold">TOTAL:</span>
+                      <span className="text-yellow-400 font-black">+{50 + Math.min(loginStreak * 10, 100)} Coins 💰</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Claim Button */}
+              <button
+                onClick={claimDailyBonus}
+                className="w-full rounded-2xl font-gaming font-black text-3xl py-8 transition-all active:scale-95 hover:scale-105 border-2"
+                style={{
+                  background: 'linear-gradient(135deg, #ffd700, #ff8c00, #ff6b35)',
+                  borderColor: '#ffd700',
+                  color: '#fff',
+                  boxShadow: '0 0 60px rgba(255, 215, 0, 0.9), inset 0 2px 8px rgba(255,255,255,0.3)',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}
+              >
+                🎁 ABHOLEN! 🎁
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ACHIEVEMENT NOTIFICATION */}
+      {showAchievement && newAchievement && (
+        <div
+          className="fixed top-20 right-6 z-50 animate-slideInRight"
+          style={{
+            animation: 'slideInRight 0.5s ease-out, float 2s ease-in-out infinite'
+          }}
+        >
+          <div
+            className="rounded-2xl p-6 border-4 min-w-[400px]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.98), rgba(10, 15, 30, 0.99))',
+              backdropFilter: 'blur(30px)',
+              borderColor: '#ffd700',
+              boxShadow: '0 0 60px rgba(255, 215, 0, 0.8), 0 20px 40px rgba(0,0,0,0.6)'
+            }}
+          >
+            {/* Header */}
+            <div className="text-center mb-4">
+              <div
+                className="text-2xl font-gaming font-black"
+                style={{
+                  background: 'linear-gradient(180deg, #ffd700, #ff8c00)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 20px rgba(255, 215, 0, 0.6)'
+                }}
+              >
+                🏆 ACHIEVEMENT UNLOCKED!
+              </div>
+            </div>
+
+            {/* Achievement Content */}
+            <div className="flex items-center gap-4 mb-4">
+              <div
+                className="text-6xl"
+                style={{
+                  filter: 'drop-shadow(0 0 20px #ffd700)',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}
+              >
+                {newAchievement.icon}
+              </div>
+              <div>
+                <div className="text-2xl font-gaming font-black text-yellow-400 mb-1">
+                  {newAchievement.name}
+                </div>
+                <div className="text-gray-400 font-stats text-sm">
+                  {newAchievement.desc}
+                </div>
+              </div>
+            </div>
+
+            {/* Reward */}
+            <div className="bg-black/40 rounded-xl p-4 border border-yellow-500/30">
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-400 font-gaming">BELOHNUNG:</span>
+                <span className="text-3xl font-gaming font-black text-yellow-400">
+                  +{newAchievement.reward} 💰
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom Animations */}
       <style>{`
         @keyframes float-up {
@@ -1465,6 +2272,33 @@ export default function ArenaPage() {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.7; }
+        }
+
+        @keyframes scaleUp {
+          0% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+          0% {
+            opacity: 0;
+            transform: translateX(100px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
         }
 
         /* Custom scrollbar */
