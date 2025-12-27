@@ -1,0 +1,165 @@
+{
+  "_comment": "Power und Tier Korrekturen für falsch bewertete Charaktere",
+
+  "corrections": {
+    "Marvel": {
+      "Cosmic": {
+        "One-Above-All": { "power": 100, "reason": "Omnipotente Gottheit des Marvel-Universums" },
+        "Living Tribunal": { "power": 99, "reason": "Kosmischer Richter uber alle Realitäten" },
+        "Beyonder": { "power": 99, "reason": "Wesen aus dem Beyonder-Reich mit nahezu unbegrenzter Macht" },
+        "Eternity": { "power": 98, "reason": "Abstrakte Verkörperung der Zeit und des Universums" },
+        "Infinity": { "power": 98, "reason": "Abstrakte Verkörperung des Raums" },
+        "Death": { "power": 97, "reason": "Abstrakte Verkörperung des Todes" },
+        "Oblivion": { "power": 97, "reason": "Abstrakte Verkörperung der Nicht-Existenz" },
+        "Galactus": { "power": 96, "reason": "Verschlinger von Welten, kosmische Entität" },
+        "Celestials": { "power": 96, "reason": "Uralte kosmische Götter" },
+        "Phoenix Force": { "power": 97, "reason": "Kosmische Entität der Zerstörung und Wiedergeburt" },
+        "Molecule Man": { "power": 95, "reason": "Kann Materie auf molekularer Ebene kontrollieren" },
+        "Franklin Richards": { "power": 95, "reason": "Omega-Level Mutant mit Realitätsmanipulation" },
+        "Protege": { "power": 94, "reason": "Kann jede Kraft kopieren" },
+        "Cyttorak": { "power": 94, "reason": "Dämonische Gottheit der Zerstörung" },
+        "Abraxas": { "power": 93, "reason": "Multiversale Zerstörungsverkörperung" },
+        "In-Betweener": { "power": 92, "reason": "Diener von Lord Chaos und Master Order" }
+      },
+      "S": {
+        "Thor": { "power": 95, "reason": "Asgardischer Donnergott mit Mjolnir" },
+        "Hulk": { "power": 93, "reason": "Grenzenlose Stärke die mit Wut wächst" },
+        "Scarlet Witch": { "power": 94, "reason": "Chaos-Magie und Realitätsmanipulation" },
+        "Silver Surfer": { "power": 92, "reason": "Kosmische Kraft von Galactus" },
+        "Doctor Strange": { "power": 91, "reason": "Sorcerer Supreme mit magischer Allmacht" },
+        "Jean Grey": { "power": 93, "reason": "Omega-Level Telepathin und Phoenix-Wirtin" },
+        "Sentry": { "power": 94, "reason": "Die Kraft von einer Million explodierender Sonnen" },
+        "Blue Marvel": { "power": 91, "reason": "Anti-Materie Reaktor in menschlicher Form" },
+        "Hyperion": { "power": 90, "reason": "Eternal mit Superman-ähnlichen Kräften" },
+        "Gladiator": { "power": 90, "reason": "Strontianischer Superkrieger" },
+        "Adam Warlock": { "power": 90, "reason": "Kosmisch verstärktes Kunstwesen" },
+        "Thanos": { "power": 92, "reason": "Eternal-Deviant Hybrid mit kosmischer Macht" },
+        "Apocalypse": { "power": 89, "reason": "Erster Mutant mit Celestial-Technologie" },
+        "Vulcan": { "power": 89, "reason": "Omega-Level Energie-Manipulator" }
+      },
+      "A": {
+        "Iron Man": { "power": 82, "reason": "Genialer Erfinder mit mächtiger Rüstung" },
+        "Captain America": { "power": 68, "reason": "Supersoldaten-Serum, taktisches Genie" },
+        "Spider-Man": { "power": 75, "reason": "Proportionale Stärke einer Spinne, Spinnensinn" },
+        "Wolverine": { "power": 78, "reason": "Adamantium-Skelett, Heilfaktor, Berserker" },
+        "Black Panther": { "power": 72, "reason": "Herzförmiges Kraut, Vibranium-Anzug" },
+        "Captain Marvel": { "power": 88, "reason": "Kosmische Kree-Kräfte" },
+        "Vision": { "power": 80, "reason": "Synthezoid mit Gedankenstein" },
+        "Namor": { "power": 82, "reason": "Hybrid-Physiologie, Unterwasser-König" },
+        "Emma Frost": { "power": 80, "reason": "Omega-Level Telepathin, Diamantform" },
+        "Magneto": { "power": 88, "reason": "Omega-Level Magnetismus-Kontrolle" },
+        "Professor X": { "power": 85, "reason": "Mächtigster Telepath der Erde" },
+        "Storm": { "power": 85, "reason": "Omega-Level Wetterkontrolle" },
+        "Iceman": { "power": 86, "reason": "Omega-Level Kryokinese" },
+        "Rogue": { "power": 84, "reason": "Kraftabsorption, permanente Kräfte" },
+        "Colossus": { "power": 78, "reason": "Organischer Stahl, übermenschliche Stärke" },
+        "Thing": { "power": 80, "reason": "Kosmische Strahlung, Felsenhaut" },
+        "Human Torch": { "power": 78, "reason": "Pyrokinese, Flug, Supernova" }
+      },
+      "B": {
+        "Hawkeye": { "power": 55, "reason": "Weltbester Bogenschütze, keine Superkräfte" },
+        "Black Widow": { "power": 58, "reason": "Supersoldaten-Serum (leicht), Spionin" },
+        "Daredevil": { "power": 62, "reason": "Übermenschliche Sinne, Kampfkünstler" },
+        "Punisher": { "power": 50, "reason": "Menschlich, aber tödlich effizient" },
+        "Moon Knight": { "power": 65, "reason": "Multiple Persönlichkeiten, Konshu-Segen" },
+        "Luke Cage": { "power": 70, "reason": "Unzerstörbare Haut, Superstärke" },
+        "Iron Fist": { "power": 72, "reason": "Chi-Manipulation, unsterbliche Eisenfaust" },
+        "Elektra": { "power": 60, "reason": "Assassinin, mystische Kräfte" },
+        "Ghost Rider": { "power": 85, "reason": "Dämonische Macht, Penance Stare" },
+        "Blade": { "power": 68, "reason": "Dhampir, Vampirstärke ohne Schwächen" }
+      },
+      "C": {
+        "Ant-Man": { "power": 65, "reason": "Größenmanipulation, Ameisensteuerung" },
+        "Wasp": { "power": 63, "reason": "Größenmanipulation, Bio-Stinger" },
+        "Falcon": { "power": 55, "reason": "Flügel-Harness, Vogelkontrolle" },
+        "War Machine": { "power": 75, "reason": "Schwer bewaffnete Iron Man Rüstung" },
+        "Mockingbird": { "power": 52, "reason": "SHIELD-Agentin, leichtes Super-Serum" },
+        "Quicksilver": { "power": 78, "reason": "Superspeed, aber körperlich verwundbar" }
+      },
+      "D": {
+        "Nick Fury": { "power": 45, "reason": "Mensch, Super-Spion, Infinity-Formel" },
+        "Maria Hill": { "power": 40, "reason": "Menschliche SHIELD-Agentin" },
+        "Foggy Nelson": { "power": 25, "reason": "Normaler Mensch, Anwalt" },
+        "Aunt May": { "power": 20, "reason": "Normale ältere Frau" },
+        "J. Jonah Jameson": { "power": 22, "reason": "Normaler Mensch, Journalist" },
+        "Mary Jane Watson": { "power": 25, "reason": "Normale Frau, Model/Schauspielerin" }
+      },
+      "downgrade": {
+        "Bloodscream": { "tier": "B", "power": 68, "reason": "Vampir-Krieger, aber kein kosmisches Wesen" },
+        "Dracula": { "tier": "A", "power": 82, "reason": "König der Vampire, aber nicht allmächtig" },
+        "Morbius": { "tier": "C", "power": 65, "reason": "Lebender Vampir mit Schwächen" },
+        "Venom": { "tier": "A", "power": 80, "reason": "Symbiot mit Spider-Man Kräften" },
+        "Carnage": { "tier": "A", "power": 82, "reason": "Stärkerer, wahnsinniger Symbiot" },
+        "Lizard": { "tier": "C", "power": 68, "reason": "Reptilien-Mutation" },
+        "Rhino": { "tier": "B", "power": 72, "reason": "Starke Rüstung aber dumm" },
+        "Shocker": { "tier": "C", "power": 55, "reason": "Vibrations-Gauntlets" },
+        "Mysterio": { "tier": "C", "power": 58, "reason": "Illusionist ohne echte Kräfte" },
+        "Sandman": { "tier": "B", "power": 75, "reason": "Sandkontrolle, schwer zu besiegen" },
+        "Electro": { "tier": "B", "power": 78, "reason": "Elektrische Kräfte" }
+      }
+    },
+
+    "DC": {
+      "Cosmic": {
+        "The Presence": { "power": 100, "reason": "Der abrahamitische Gott des DC-Universums" },
+        "Lucifer Morningstar": { "power": 99, "reason": "Gefallener Engel mit Schöpfungskraft" },
+        "Michael Demiurgos": { "power": 99, "reason": "Erzengel mit Demiurgischer Kraft" },
+        "The Endless": { "power": 96, "reason": "Personifikationen fundamentaler Konzepte" },
+        "Elaine Belloc": { "power": 98, "reason": "Erbin des Presence" },
+        "Spectre": { "power": 96, "reason": "Gottes Zorn, nahezu allmächtig" },
+        "Anti-Monitor": { "power": 97, "reason": "Zerstörer von Universen" },
+        "Monitor": { "power": 95, "reason": "Wächter des Multiversums" },
+        "Perpetua": { "power": 98, "reason": "Mutter des Multiversums" },
+        "Mr. Mxyzptlk": { "power": 94, "reason": "5-dimensionales Wesen" },
+        "Bat-Mite": { "power": 93, "reason": "5-dimensionaler Batman-Fan" }
+      },
+      "S": {
+        "Superman": { "power": 96, "reason": "Kryptonische Sonnenkräfte, Symbol der Hoffnung" },
+        "Darkseid": { "power": 95, "reason": "Neuer Gott, Omega-Strahlen, Tyrann" },
+        "Doomsday": { "power": 93, "reason": "Kann nicht zweimal auf dieselbe Weise sterben" },
+        "Dr. Manhattan": { "power": 97, "reason": "Quantenbewusstsein, Realitätskontrolle" },
+        "Trigon": { "power": 94, "reason": "Dämonendimensions-Herrscher" },
+        "Black Adam": { "power": 92, "reason": "Shazam-Kräfte mit Jahrtausenden Erfahrung" },
+        "Shazam": { "power": 91, "reason": "Götterkräfte in einem Wort" },
+        "Wonder Woman": { "power": 89, "reason": "Amazonenkriegerin mit göttlicher Abstammung" },
+        "Martian Manhunter": { "power": 88, "reason": "Telepathie plus Superman-Level Kräfte" },
+        "Supergirl": { "power": 87, "reason": "Volle kryptonische Kräfte" }
+      },
+      "A": {
+        "Flash (Barry Allen)": { "power": 88, "reason": "Speed Force Verbindung" },
+        "Flash (Wally West)": { "power": 90, "reason": "Speed Force Meister" },
+        "Green Lantern (Hal Jordan)": { "power": 85, "reason": "Furchtlosester Lantern" },
+        "Aquaman": { "power": 80, "reason": "König von Atlantis, Ozean-Kontrolle" },
+        "Doctor Fate": { "power": 88, "reason": "Helm von Nabu, Ordnungsmagie" },
+        "Zatanna": { "power": 82, "reason": "Mächtige Zauberin, rückwärts gesprochene Magie" },
+        "Swamp Thing": { "power": 86, "reason": "Avatar des Grün, planetare Macht" },
+        "Constantine": { "power": 75, "reason": "Meister des Okkulten, List über Macht" },
+        "Lobo": { "power": 85, "reason": "Czarnier, kann nicht dauerhaft sterben" }
+      },
+      "B": {
+        "Batman": { "power": 70, "reason": "Menschliches Maximum, Vorbereitung ist alles" },
+        "Nightwing": { "power": 62, "reason": "Akrobat, bester Bat-Family Kämpfer" },
+        "Red Hood": { "power": 60, "reason": "Lazarus-verstärkt, tödliche Methoden" },
+        "Cyborg": { "power": 78, "reason": "Technopathie, Mutter-Box Integration" },
+        "Starfire": { "power": 80, "reason": "Tamaranische Sternenbolzen" },
+        "Raven": { "power": 83, "reason": "Dämonenerbe, Emotionsmagie" },
+        "Beast Boy": { "power": 72, "reason": "Jede Tierform" },
+        "Green Arrow": { "power": 55, "reason": "Meisterschütze, keine Superkräfte" },
+        "Black Canary": { "power": 68, "reason": "Canary Cry, Meisterkämpferin" }
+      },
+      "C": {
+        "Robin (Damian)": { "power": 52, "reason": "Assassinen-Training, noch jung" },
+        "Batgirl": { "power": 55, "reason": "Kämpferin und Hackerin" },
+        "Blue Beetle (Jaime)": { "power": 75, "reason": "Alien-Rüstung mit vielen Funktionen" },
+        "Static": { "power": 70, "reason": "Elektrokinese" },
+        "Booster Gold": { "power": 68, "reason": "Zukunftstechnologie" }
+      },
+      "D": {
+        "Alfred Pennyworth": { "power": 38, "reason": "Butler, Ex-MI6, Vater-Figur" },
+        "Commissioner Gordon": { "power": 40, "reason": "Polizist, Batmans Verbündeter" },
+        "Lois Lane": { "power": 32, "reason": "Journalistin, mutig aber menschlich" },
+        "Jimmy Olsen": { "power": 35, "reason": "Fotograf, Signal-Uhr-Träger" }
+      }
+    }
+  }
+}
