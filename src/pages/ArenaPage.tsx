@@ -19,14 +19,23 @@ import { CompactFilter } from '../components/CompactFilter';
 import { useHeroFilter } from '../hooks/useHeroFilter';
 import { HeroClassIcon } from '../components/HeroClassBadge';
 
+// Action types for turn-based combat
+type ActionType = 'attack' | 'tactics' | 'defense' | 'ultimate';
+
 interface BattleState {
   hp1: number;
   hp2: number;
   maxHp1: number;
   maxHp2: number;
+  energy1: number; // 0-100, builds up for ultimate
+  energy2: number;
   round: number;
   isActive: boolean;
   winner: Hero | null;
+  waitingForPlayer: boolean; // True when player needs to choose action
+  isDefending1: boolean; // Defense status for damage reduction
+  isDefending2: boolean;
+  coins: number; // Coins earned this battle
 }
 
 interface BattleLogEntry {
@@ -55,12 +64,16 @@ export default function ArenaPage() {
   const [fighter2, setFighter2] = useState<Hero | null>(null);
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [battleLog, setBattleLog] = useState<BattleLogEntry[]>([]);
-  const [isAutoMode, setIsAutoMode] = useState(false);
   const [floatingDamages, setFloatingDamages] = useState<FloatingDamage[]>([]);
   const [shake, setShake] = useState<1 | 2 | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [showVictoryScreen, setShowVictoryScreen] = useState(false);
+  const [totalCoins, setTotalCoins] = useState(() => {
+    const saved = localStorage.getItem('herorank_coins');
+    return saved ? parseInt(saved, 10) : 0;
+  });
   const logRef = useRef<HTMLDivElement>(null);
   const autoIntervalRef = useRef<number | null>(null);
 
@@ -99,31 +112,83 @@ export default function ArenaPage() {
   }, []);
 
   const calculateHP = (hero: Hero) => {
-    // Handle 0-values: use minimum of 10 for missing stats
+    // NEW: Much simpler HP for faster battles (6-8 rounds)
+    // Target: 100-200 HP range
     const effectiveDurability = hero.stats.durability || 10;
-    const effectiveStrength = hero.stats.strength || 10;
+    const baseHP = 100 + Math.round(effectiveDurability * 1.2 + hero.power * 0.5);
 
-    // Calculate base HP
-    const baseHP = Math.round(
-      (effectiveDurability * 15) +
-      (effectiveStrength * 5) +
-      (hero.power * 3)
-    );
-
-    // Guarantee minimum HP based on tier/power
-    const minHP = hero.power >= 90 ? 2000 : hero.power >= 70 ? 1500 : hero.power >= 50 ? 1000 : 500;
-
-    return Math.max(baseHP, minHP);
+    // Cap at 250 to ensure battles don't drag
+    return Math.min(250, Math.max(100, baseHP));
   };
 
-  const getAbilityPower = (hero: Hero, abilityIndex: number) => {
-    const baseStats = [
-      hero.stats.strength,
-      hero.stats.intelligence,
-      hero.stats.combat,
-    ];
-    const basePower = baseStats[abilityIndex % 3] || hero.stats.combat;
-    return Math.round(basePower * (0.8 + Math.random() * 0.4));
+  // NEW DAMAGE FORMULA - Faster, more balanced battles
+  const calculateDamage = (
+    attacker: Hero,
+    defender: Hero,
+    actionType: ActionType,
+    defenderIsDefending: boolean
+  ): number => {
+    let baseDamage = 0;
+
+    switch (actionType) {
+      case 'attack':
+        // High damage, scales with strength
+        baseDamage = (attacker.stats.strength || 50) * 0.4 + attacker.power * 0.15;
+        break;
+      case 'tactics':
+        // Moderate damage, guaranteed hit
+        baseDamage = (attacker.stats.intelligence || 50) * 0.3 + attacker.power * 0.12;
+        break;
+      case 'ultimate':
+        // Massive damage! 3x attack damage
+        baseDamage = ((attacker.stats.strength || 50) * 0.4 + attacker.power * 0.15) * 3;
+        break;
+      case 'defense':
+        // No damage when defending
+        return 0;
+    }
+
+    // Defender's durability reduces damage
+    const defense = (defender.stats.durability || 50) * 0.15;
+    let finalDamage = Math.max(10, baseDamage - defense);
+
+    // Defense stance blocks 50% damage
+    if (defenderIsDefending) {
+      finalDamage *= 0.5;
+    }
+
+    // Minimum 10% of max HP damage to ensure battles end
+    const minDamage = calculateHP(defender) * 0.1;
+    return Math.round(Math.max(minDamage, finalDamage));
+  };
+
+  // OPPONENT AI - Simple but strategic
+  const getOpponentAction = (opponentHP: number, maxHP: number, energy: number): ActionType => {
+    const hpPercent = (opponentHP / maxHP) * 100;
+
+    // Use ultimate if available
+    if (energy >= 100) {
+      return 'ultimate';
+    }
+
+    // Low HP? Defend more often
+    if (hpPercent < 30 && Math.random() < 0.6) {
+      return 'defense';
+    }
+
+    // Medium HP? Mixed strategy
+    if (hpPercent < 60) {
+      const rand = Math.random();
+      if (rand < 0.4) return 'attack';
+      if (rand < 0.7) return 'tactics';
+      return 'defense';
+    }
+
+    // High HP? Aggressive
+    const rand = Math.random();
+    if (rand < 0.5) return 'attack';
+    if (rand < 0.85) return 'tactics';
+    return 'defense';
   };
 
   const showToast = (text: string, damage?: number, icon?: string) => {
@@ -170,9 +235,9 @@ export default function ArenaPage() {
     setFighter2(null);
     setBattleState(null);
     setBattleLog([]);
-    setIsAutoMode(false);
     setFloatingDamages([]);
     setToast(null);
+    setShowVictoryScreen(false);
   };
 
   const randomFighters = () => {
@@ -196,137 +261,182 @@ export default function ArenaPage() {
       hp2,
       maxHp1: hp1,
       maxHp2: hp2,
+      energy1: 0,
+      energy2: 0,
       round: 1,
       isActive: true,
       winner: null,
+      waitingForPlayer: true,
+      isDefending1: false,
+      isDefending2: false,
+      coins: 0,
     });
 
     setBattleLog([{
-      text: `${fighter1.name} vs ${fighter2.name}!`,
+      text: `${fighter1.name} vs ${fighter2.name}! WÄHLE DEINE AKTION!`,
       type: 'start'
     }]);
 
     showToast(`${fighter1.name} vs ${fighter2.name}!`, undefined, '⚔️');
+    setShowVictoryScreen(false);
   };
 
-  const executeRound = () => {
-    if (!fighter1 || !fighter2 || !battleState || !battleState.isActive) return;
+  // NEW TURN-BASED EXECUTION
+  const executePlayerAction = (playerAction: ActionType) => {
+    if (!fighter1 || !fighter2 || !battleState || !battleState.isActive || !battleState.waitingForPlayer) return;
 
     const newLog: BattleLogEntry[] = [];
     let newHp1 = battleState.hp1;
     let newHp2 = battleState.hp2;
+    let newEnergy1 = battleState.energy1;
+    let newEnergy2 = battleState.energy2;
 
-    // Fighter 1 attacks
-    const ability1Index = Math.floor(Math.random() * Math.min(4, fighter1.abilities.length));
-    const ability1 = fighter1.abilities[ability1Index] || 'Angriff';
-    const damage1 = getAbilityPower(fighter1, ability1Index);
-    const isCrit1 = Math.random() > 0.85;
-    const actualDamage1 = Math.max(1, Math.round((damage1 - Math.floor(fighter2.stats.durability / 10)) * (isCrit1 ? 1.5 : 1)));
-    newHp2 = Math.max(0, newHp2 - actualDamage1);
+    // Player action
+    const actionNames = {
+      attack: 'ANGRIFF',
+      tactics: 'TAKTIK',
+      defense: 'VERTEIDIGUNG',
+      ultimate: 'ULTIMATE!'
+    };
 
-    // Trigger effects
-    triggerShake(2);
-    addFloatingDamage(actualDamage1, 2, isCrit1);
-    showToast(`${fighter1.name} nutzt ${ability1}!`, actualDamage1, fighter1.image);
+    const damage1 = calculateDamage(fighter1, fighter2, playerAction, battleState.isDefending2);
 
-    newLog.push({
-      text: `${fighter1.name} nutzt ${ability1}!`,
-      type: 'attack',
-      damage: actualDamage1,
-      actor: fighter1.name
-    });
+    if (playerAction === 'defense') {
+      newLog.push({
+        text: `${fighter1.name} geht in Verteidigung! (+50% Schutz)`,
+        type: 'defense',
+        actor: fighter1.name
+      });
+      showToast(`${fighter1.name} verteidigt!`, undefined, '🛡️');
+    } else {
+      newHp2 = Math.max(0, newHp2 - damage1);
+      triggerShake(2);
+      addFloatingDamage(damage1, 2, playerAction === 'ultimate');
+      showToast(`${fighter1.name}: ${actionNames[playerAction]}!`, damage1, fighter1.image);
 
-    // Check if fighter 2 is defeated
+      newLog.push({
+        text: `${fighter1.name} nutzt ${actionNames[playerAction]}! ${damage1} Schaden!`,
+        type: playerAction === 'ultimate' ? 'special' : 'attack',
+        damage: damage1,
+        actor: fighter1.name
+      });
+    }
+
+    // Build energy (except ultimate which consumes it)
+    if (playerAction === 'ultimate') {
+      newEnergy1 = 0;
+    } else if (playerAction === 'tactics') {
+      newEnergy1 = Math.min(100, newEnergy1 + 30);
+    } else {
+      newEnergy1 = Math.min(100, newEnergy1 + 20);
+    }
+
+    // Check if opponent defeated
     if (newHp2 <= 0) {
+      const coinsEarned = 50;
+      const newTotalCoins = totalCoins + coinsEarned;
+      setTotalCoins(newTotalCoins);
+      localStorage.setItem('herorank_coins', newTotalCoins.toString());
+
       setBattleState({
         ...battleState,
         hp1: newHp1,
         hp2: 0,
+        energy1: newEnergy1,
+        energy2: newEnergy2,
         isActive: false,
         winner: fighter1,
+        waitingForPlayer: false,
+        coins: coinsEarned,
       });
       setBattleLog(prev => [...prev, ...newLog, {
-        text: `${fighter1.name} gewinnt den Kampf!`,
+        text: `🏆 ${fighter1.name} GEWINNT! +${coinsEarned} Coins!`,
         type: 'end'
       }]);
       showToast(`🏆 ${fighter1.name} gewinnt!`, undefined, '🏆');
-      stopAutoMode();
+      setShowVictoryScreen(true);
       return;
     }
 
-    // Fighter 2 attacks
+    // Opponent AI action (after delay)
     setTimeout(() => {
-      const ability2Index = Math.floor(Math.random() * Math.min(4, fighter2.abilities.length));
-      const ability2 = fighter2.abilities[ability2Index] || 'Angriff';
-      const damage2 = getAbilityPower(fighter2, ability2Index);
-      const isCrit2 = Math.random() > 0.85;
-      const actualDamage2 = Math.max(1, Math.round((damage2 - Math.floor(fighter1.stats.durability / 10)) * (isCrit2 ? 1.5 : 1)));
-      newHp1 = Math.max(0, newHp1 - actualDamage2);
+      const opponentAction = getOpponentAction(newHp2, battleState.maxHp2, newEnergy2);
+      const damage2 = calculateDamage(fighter2, fighter1, opponentAction, playerAction === 'defense');
 
-      // Trigger effects
-      triggerShake(1);
-      addFloatingDamage(actualDamage2, 1, isCrit2);
-      showToast(`${fighter2.name} nutzt ${ability2}!`, actualDamage2, fighter2.image);
+      if (opponentAction === 'defense') {
+        newLog.push({
+          text: `${fighter2.name} verteidigt!`,
+          type: 'defense',
+          actor: fighter2.name
+        });
+        showToast(`${fighter2.name} verteidigt!`, undefined, '🛡️');
+      } else {
+        newHp1 = Math.max(0, newHp1 - damage2);
+        triggerShake(1);
+        addFloatingDamage(damage2, 1, opponentAction === 'ultimate');
+        showToast(`${fighter2.name}: ${actionNames[opponentAction]}!`, damage2, fighter2.image);
 
-      newLog.push({
-        text: `${fighter2.name} nutzt ${ability2}!`,
-        type: 'attack',
-        damage: actualDamage2,
-        actor: fighter2.name
-      });
+        newLog.push({
+          text: `${fighter2.name} nutzt ${actionNames[opponentAction]}! ${damage2} Schaden!`,
+          type: opponentAction === 'ultimate' ? 'special' : 'attack',
+          damage: damage2,
+          actor: fighter2.name
+        });
+      }
 
-      // Check if fighter 1 is defeated
+      // Build opponent energy
+      if (opponentAction === 'ultimate') {
+        newEnergy2 = 0;
+      } else if (opponentAction === 'tactics') {
+        newEnergy2 = Math.min(100, newEnergy2 + 30);
+      } else {
+        newEnergy2 = Math.min(100, newEnergy2 + 20);
+      }
+
+      // Check if player defeated
       if (newHp1 <= 0) {
         setBattleState({
           ...battleState,
           hp1: 0,
           hp2: newHp2,
+          energy1: newEnergy1,
+          energy2: newEnergy2,
           isActive: false,
           winner: fighter2,
+          waitingForPlayer: false,
+          coins: 0,
         });
         setBattleLog(prev => [...prev, ...newLog, {
           text: `${fighter2.name} gewinnt den Kampf!`,
           type: 'end'
         }]);
-        showToast(`🏆 ${fighter2.name} gewinnt!`, undefined, '🏆');
-        stopAutoMode();
+        showToast(`${fighter2.name} gewinnt!`, undefined, '💀');
         return;
       }
 
+      // Continue battle
       setBattleState({
         ...battleState,
         hp1: newHp1,
         hp2: newHp2,
+        energy1: newEnergy1,
+        energy2: newEnergy2,
         round: battleState.round + 1,
+        waitingForPlayer: true,
+        isDefending1: playerAction === 'defense',
+        isDefending2: opponentAction === 'defense',
       });
       setBattleLog(prev => [...prev, ...newLog]);
-    }, 800);
+    }, 1000);
+
+    // Temporarily disable player input
+    setBattleState({
+      ...battleState,
+      waitingForPlayer: false,
+    });
   };
 
-  const startAutoMode = () => {
-    if (!battleState?.isActive) {
-      startBattle();
-      setTimeout(() => {
-        setIsAutoMode(true);
-        autoIntervalRef.current = window.setInterval(() => {
-          executeRound();
-        }, 2000);
-      }, 300);
-    } else {
-      setIsAutoMode(true);
-      autoIntervalRef.current = window.setInterval(() => {
-        executeRound();
-      }, 2000);
-    }
-  };
-
-  const stopAutoMode = () => {
-    setIsAutoMode(false);
-    if (autoIntervalRef.current) {
-      clearInterval(autoIntervalRef.current);
-      autoIntervalRef.current = null;
-    }
-  };
+  // Auto-mode removed - now using turn-based battle system
 
   // Stat Icons with Neon Glow
   const StatIcon = ({ stat, value }: { stat: string; value: number }) => {
@@ -525,6 +635,38 @@ export default function ArenaPage() {
               </div>
             </div>
           </div>
+
+          {/* ENERGY BAR - NEW! */}
+          {(battleState?.energy1 !== undefined && position === 1) || (battleState?.energy2 !== undefined && position === 2) ? (
+            <div className="w-full mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-cyan-400 font-gaming text-sm uppercase tracking-wider">Energy</span>
+                <span className="text-cyan-400 font-gaming text-sm font-bold">
+                  {position === 1 ? battleState?.energy1 : battleState?.energy2}%
+                </span>
+              </div>
+              <div className="h-4 rounded-full overflow-hidden relative border border-cyan-500/30"
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(20,25,45,0.95), rgba(15,20,40,0.98))',
+                  boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)'
+                }}
+              >
+                <div
+                  className="h-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${position === 1 ? battleState?.energy1 : battleState?.energy2}%`,
+                    background: 'linear-gradient(90deg, #00d4ff, #00a8cc, #0088aa)',
+                    boxShadow: '0 0 20px rgba(0, 212, 255, 0.8), inset 0 1px 4px rgba(255,255,255,0.3)'
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                    style={{ animation: 'shimmer 2s infinite' }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Stats Grid with NEON ICONS */}
           <div className="grid grid-cols-2 gap-2 mb-3">
@@ -774,8 +916,27 @@ export default function ArenaPage() {
           )}
         </div>
 
-        {/* Action Buttons - CYBER GAMING STYLE */}
+        {/* Action Buttons - NEW TURN-BASED RPG STYLE */}
         <div className="max-w-2xl mx-auto space-y-4 mb-10">
+          {/* Coin Display */}
+          <div className="text-center mb-4">
+            <div
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-full border-2"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.1))',
+                backdropFilter: 'blur(10px)',
+                borderColor: '#ffd70060',
+                boxShadow: '0 0 30px rgba(255, 215, 0, 0.3), inset 0 0 20px rgba(255, 215, 0, 0.1)'
+              }}
+            >
+              <span className="text-3xl">💰</span>
+              <span className="text-2xl font-gaming font-black text-yellow-400">
+                {totalCoins} COINS
+              </span>
+            </div>
+          </div>
+
+          {/* START Button */}
           {(!battleState || !battleState.isActive) && fighter1 && fighter2 && (
             <button
               onClick={startBattle}
@@ -793,21 +954,97 @@ export default function ArenaPage() {
             </button>
           )}
 
-          {battleState?.isActive && !isAutoMode && (
-            <button
-              onClick={startAutoMode}
-              className="w-full rounded-2xl font-gaming font-black text-3xl uppercase flex items-center justify-center gap-4 transition-all active:scale-95 border-2"
-              style={{
-                minHeight: '80px',
-                background: 'linear-gradient(135deg, #a855f7, #9333ea, #7e22ce)',
-                color: '#fff',
-                borderColor: '#a855f7',
-                boxShadow: '0 0 50px rgba(168, 85, 247, 0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
-              }}
-            >
-              <Play size={40} fill="#fff" />
-              AUTO
-            </button>
+          {/* TURN-BASED ACTION BUTTONS */}
+          {battleState?.isActive && battleState?.waitingForPlayer && (
+            <div className="space-y-3">
+              <div className="text-center mb-4">
+                <div className="text-2xl font-gaming font-black text-cyan-400 animate-pulse"
+                  style={{
+                    textShadow: '0 0 20px #00d4ff, 0 0 40px #00d4ff'
+                  }}
+                >
+                  WÄHLE DEINE AKTION!
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* ATTACK Button */}
+                <button
+                  onClick={() => executePlayerAction('attack')}
+                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-105 border-2"
+                  style={{
+                    minHeight: '90px',
+                    background: 'linear-gradient(135deg, #ff6b35, #ff4500)',
+                    color: '#fff',
+                    borderColor: '#ff6b35',
+                    boxShadow: '0 0 40px rgba(255, 107, 53, 0.6), inset 0 2px 6px rgba(255,255,255,0.2)'
+                  }}
+                >
+                  <Zap size={32} fill="#fff" />
+                  <span>ANGRIFF</span>
+                  <span className="text-sm font-stats">Hoher Schaden</span>
+                </button>
+
+                {/* TACTICS Button */}
+                <button
+                  onClick={() => executePlayerAction('tactics')}
+                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-105 border-2"
+                  style={{
+                    minHeight: '90px',
+                    background: 'linear-gradient(135deg, #a855f7, #9333ea)',
+                    color: '#fff',
+                    borderColor: '#a855f7',
+                    boxShadow: '0 0 40px rgba(168, 85, 247, 0.6), inset 0 2px 6px rgba(255,255,255,0.2)'
+                  }}
+                >
+                  <Brain size={32} />
+                  <span>TAKTIK</span>
+                  <span className="text-sm font-stats">+Energy</span>
+                </button>
+
+                {/* DEFENSE Button */}
+                <button
+                  onClick={() => executePlayerAction('defense')}
+                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-105 border-2"
+                  style={{
+                    minHeight: '90px',
+                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: '#fff',
+                    borderColor: '#22c55e',
+                    boxShadow: '0 0 40px rgba(34, 197, 94, 0.6), inset 0 2px 6px rgba(255,255,255,0.2)'
+                  }}
+                >
+                  <Shield size={32} />
+                  <span>VERTEIDIGUNG</span>
+                  <span className="text-sm font-stats">-50% Schaden</span>
+                </button>
+
+                {/* ULTIMATE Button */}
+                <button
+                  onClick={() => executePlayerAction('ultimate')}
+                  disabled={!battleState?.energy1 || battleState.energy1 < 100}
+                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-110 border-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
+                  style={{
+                    minHeight: '90px',
+                    background: battleState?.energy1 >= 100
+                      ? 'linear-gradient(135deg, #ffd700, #ff8c00, #ff6b35)'
+                      : 'linear-gradient(135deg, #4b5563, #374151)',
+                    color: '#fff',
+                    borderColor: battleState?.energy1 >= 100 ? '#ffd700' : '#4b5563',
+                    boxShadow: battleState?.energy1 >= 100
+                      ? '0 0 60px rgba(255, 215, 0, 0.9), inset 0 2px 8px rgba(255,255,255,0.3), 0 0 90px rgba(255, 140, 0, 0.6)'
+                      : '0 4px 16px rgba(0,0,0,0.3)',
+                    animation: battleState?.energy1 >= 100 ? 'pulse 1s ease-in-out infinite' : 'none'
+                  }}
+                >
+                  <Swords size={32} fill={battleState?.energy1 >= 100 ? '#fff' : undefined} />
+                  <span>ULTIMATE!</span>
+                  <span className="text-sm font-stats">
+                    {battleState?.energy1 >= 100 ? 'BEREIT!' : `${battleState?.energy1}/100`}
+                  </span>
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Secondary Buttons */}
@@ -1075,6 +1312,128 @@ export default function ArenaPage() {
               >
                 <X size={24} />
                 SCHLIESSEN
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VICTORY SCREEN - NEW! */}
+      {showVictoryScreen && battleState?.winner && (
+        <div
+          className="fixed inset-0 bg-black/95 backdrop-blur-lg z-50 flex items-center justify-center p-6"
+          onClick={() => setShowVictoryScreen(false)}
+        >
+          <div
+            className="rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-4 animate-float"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 20, 40, 0.98), rgba(10, 15, 30, 0.99))',
+              backdropFilter: 'blur(30px)',
+              borderColor: battleState.winner.id === fighter1?.id ? '#00ff88' : '#ff4444',
+              boxShadow: battleState.winner.id === fighter1?.id
+                ? '0 0 100px rgba(0, 255, 136, 0.8), 0 20px 80px rgba(0,0,0,0.6)'
+                : '0 0 100px rgba(255, 68, 68, 0.8), 0 20px 80px rgba(0,0,0,0.6)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-8 py-10 text-center border-b border-white/10">
+              <div
+                className="text-8xl font-gaming font-black mb-6"
+                style={{
+                  background: battleState.winner.id === fighter1?.id
+                    ? 'linear-gradient(180deg, #00ff88, #00cc66)'
+                    : 'linear-gradient(180deg, #ff4444, #cc0000)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 40px rgba(255, 215, 0, 0.6)',
+                  animation: 'neon-pulse 2s ease-in-out infinite'
+                }}
+              >
+                {battleState.winner.id === fighter1?.id ? 'VICTORY!' : 'DEFEAT...'}
+              </div>
+
+              {/* Winner Display */}
+              <div
+                className="text-7xl mb-4"
+                style={{
+                  filter: `drop-shadow(0 10px 40px ${battleState.winner.color})`,
+                  animation: 'float 3s ease-in-out infinite'
+                }}
+              >
+                {battleState.winner.image}
+              </div>
+
+              <h2
+                className="text-5xl font-hero mb-4 uppercase"
+                style={{
+                  color: battleState.winner.universe === 'Marvel' ? '#e74c3c' : '#3498db',
+                  textShadow: `0 0 20px ${battleState.winner.universe === 'Marvel' ? '#e74c3c' : '#3498db'}`
+                }}
+              >
+                {battleState.winner.name}
+              </h2>
+
+              <div className="text-2xl font-gaming text-cyan-400">
+                RUNDE {battleState.round}
+              </div>
+            </div>
+
+            {/* Rewards */}
+            {battleState.winner.id === fighter1?.id && (
+              <div className="px-8 py-8 bg-black/40">
+                <div className="text-center mb-6">
+                  <div className="text-3xl font-gaming font-black text-yellow-400 mb-4"
+                    style={{
+                      textShadow: '0 0 30px #ffd700, 0 0 60px #ffd700',
+                      animation: 'neon-pulse 2s ease-in-out infinite'
+                    }}
+                  >
+                    BELOHNUNGEN
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-6 mb-6">
+                  <div
+                    className="flex items-center gap-4 px-8 py-5 rounded-2xl border-2"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.15))',
+                      borderColor: '#ffd700',
+                      boxShadow: '0 0 40px rgba(255, 215, 0, 0.5), inset 0 0 30px rgba(255, 215, 0, 0.1)'
+                    }}
+                  >
+                    <span className="text-6xl">💰</span>
+                    <div>
+                      <div className="text-5xl font-gaming font-black text-yellow-400">
+                        +{battleState.coins}
+                      </div>
+                      <div className="text-lg font-stats text-yellow-300">COINS</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center text-cyan-300 font-gaming text-xl">
+                  Gesamt: {totalCoins} Coins
+                </div>
+              </div>
+            )}
+
+            {/* Continue Button */}
+            <div className="px-8 py-6">
+              <button
+                onClick={() => {
+                  setShowVictoryScreen(false);
+                  clearFighters();
+                }}
+                className="w-full rounded-2xl font-gaming font-black text-2xl py-6 transition-all active:scale-95 hover:scale-105 border-2"
+                style={{
+                  background: 'linear-gradient(135deg, #00d4ff, #0099cc)',
+                  borderColor: '#00d4ff',
+                  color: '#000',
+                  boxShadow: '0 0 50px rgba(0, 212, 255, 0.6), inset 0 2px 8px rgba(255,255,255,0.3)'
+                }}
+              >
+                WEITER
               </button>
             </div>
           </div>
