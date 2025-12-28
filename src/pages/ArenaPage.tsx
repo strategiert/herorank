@@ -835,14 +835,14 @@ export default function ArenaPage() {
     if (!hero) {
       return (
         <div
-          className="flex-1 rounded-3xl border-2 border-dashed border-cyan-500/30 p-8 flex flex-col items-center justify-center min-h-[320px] transition-all duration-300 hover:border-cyan-500/50"
+          className="flex-1 rounded-2xl border-2 border-dashed border-cyan-500/30 p-4 flex flex-col items-center justify-center min-h-[180px] transition-all duration-300 hover:border-cyan-500/50"
           style={{
             background: 'rgba(10, 15, 30, 0.6)',
             backdropFilter: 'blur(10px)'
           }}
         >
-          <div className="text-8xl mb-4 opacity-20">👤</div>
-          <span className="text-cyan-400 text-xl font-gaming uppercase tracking-wider">
+          <div className="text-5xl mb-2 opacity-20">👤</div>
+          <span className="text-cyan-400 text-sm font-gaming uppercase tracking-wider">
             Kämpfer {position}
           </span>
         </div>
@@ -866,7 +866,7 @@ export default function ArenaPage() {
       >
         {/* GLASSMORPHISM CARD */}
         <div
-          className="rounded-3xl p-6 relative overflow-hidden border-2"
+          className="rounded-2xl p-3 relative overflow-hidden border-2"
           style={{
             background: `linear-gradient(135deg, rgba(15, 20, 40, 0.85), rgba(10, 15, 30, 0.90))`,
             backdropFilter: 'blur(20px) saturate(180%)',
@@ -896,13 +896,13 @@ export default function ArenaPage() {
               </div>
             ))}
 
-          {/* Hero Avatar - MASSIVE with NEON GLOW */}
-          <div className="text-center relative mb-4">
+          {/* Hero Avatar - NEON GLOW */}
+          <div className="text-center relative mb-2">
             <div
               className="inline-block transition-transform duration-500 hover:scale-110 active:scale-95 relative"
               style={{
-                fontSize: '11rem',
-                filter: `drop-shadow(0 10px 40px ${hero.color}) drop-shadow(0 0 80px ${hero.color}80)`,
+                fontSize: '5rem',
+                filter: `drop-shadow(0 5px 20px ${hero.color}) drop-shadow(0 0 40px ${hero.color}80)`,
                 animation: 'float 4s ease-in-out infinite'
               }}
             >
@@ -911,7 +911,7 @@ export default function ArenaPage() {
 
             {/* Hero Name - GAMING FONT with NEON */}
             <h3
-              className="text-4xl font-hero mt-4 mb-2 tracking-wider uppercase"
+              className="text-lg font-hero mt-2 mb-1 tracking-wider uppercase"
               style={{
                 color: universeColor,
                 textShadow: `0 0 10px ${universeColor}, 0 0 20px ${universeColor}, 0 0 40px ${universeColor}`,
@@ -923,7 +923,7 @@ export default function ArenaPage() {
 
             {/* Publisher Badge - GLOWING PILL */}
             <div
-              className={`inline-block text-lg px-8 py-2 rounded-full font-gaming font-black uppercase tracking-widest ${
+              className={`inline-block text-xs px-4 py-1 rounded-full font-gaming font-black uppercase tracking-widest ${
                 hero.universe === 'Marvel' ? 'bg-red-600' : 'bg-blue-600'
               }`}
               style={{
@@ -937,13 +937,13 @@ export default function ArenaPage() {
             </div>
           </div>
 
-          {/* HP Bar - THICK with NEON GRADIENT */}
-          <div className="w-full mb-4">
+          {/* HP Bar - NEON GRADIENT */}
+          <div className="w-full mb-2">
             <div
-              className="h-10 rounded-full overflow-hidden relative border-2 border-white/20"
+              className="h-4 rounded-full overflow-hidden relative border border-white/20"
               style={{
                 background: 'linear-gradient(to bottom, rgba(20,25,45,0.95), rgba(15,20,40,0.98))',
-                boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3)'
+                boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.5), 0 0 10px rgba(0,0,0,0.3)'
               }}
             >
               {/* HP Fill with GRADIENT & GLOW */}
@@ -957,10 +957,10 @@ export default function ArenaPage() {
                     ? 'linear-gradient(90deg, #ffdd00, #ffbb00, #ff9900)'
                     : 'linear-gradient(90deg, #ff4444, #cc0000, #aa0000)',
                   boxShadow: hpPercent > 50
-                    ? '0 0 30px rgba(0, 255, 136, 0.8), inset 0 2px 8px rgba(255,255,255,0.4)'
+                    ? '0 0 20px rgba(0, 255, 136, 0.6), inset 0 1px 4px rgba(255,255,255,0.4)'
                     : hpPercent > 25
-                    ? '0 0 30px rgba(255, 221, 0, 0.8), inset 0 2px 8px rgba(255,255,255,0.4)'
-                    : '0 0 30px rgba(255, 68, 68, 0.8), inset 0 2px 8px rgba(255,255,255,0.4)'
+                    ? '0 0 20px rgba(255, 221, 0, 0.6), inset 0 1px 4px rgba(255,255,255,0.4)'
+                    : '0 0 20px rgba(255, 68, 68, 0.6), inset 0 1px 4px rgba(255,255,255,0.4)'
                 }}
               >
                 {/* Shimmer Effect */}
@@ -980,7 +980,7 @@ export default function ArenaPage() {
               {/* HP Text INSIDE with CYBER FONT */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <span
-                  className="text-white font-gaming font-black text-xl tracking-wider"
+                  className="text-white font-gaming font-black text-xs tracking-wider"
                   style={{
                     textShadow: '0 0 10px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.8), 0 0 20px currentColor'
                   }}
@@ -991,19 +991,19 @@ export default function ArenaPage() {
             </div>
           </div>
 
-          {/* ENERGY BAR - NEW! */}
+          {/* ENERGY BAR */}
           {(battleState?.energy1 !== undefined && position === 1) || (battleState?.energy2 !== undefined && position === 2) ? (
-            <div className="w-full mb-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-cyan-400 font-gaming text-sm uppercase tracking-wider">Energy</span>
-                <span className="text-cyan-400 font-gaming text-sm font-bold">
+            <div className="w-full mb-2">
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-cyan-400 font-gaming text-xs uppercase tracking-wider">Energy</span>
+                <span className="text-cyan-400 font-gaming text-xs font-bold">
                   {position === 1 ? battleState?.energy1 : battleState?.energy2}%
                 </span>
               </div>
-              <div className="h-4 rounded-full overflow-hidden relative border border-cyan-500/30"
+              <div className="h-2 rounded-full overflow-hidden relative border border-cyan-500/30"
                 style={{
                   background: 'linear-gradient(to bottom, rgba(20,25,45,0.95), rgba(15,20,40,0.98))',
-                  boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)'
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)'
                 }}
               >
                 <div
@@ -1011,7 +1011,7 @@ export default function ArenaPage() {
                   style={{
                     width: `${position === 1 ? battleState?.energy1 : battleState?.energy2}%`,
                     background: 'linear-gradient(90deg, #00d4ff, #00a8cc, #0088aa)',
-                    boxShadow: '0 0 20px rgba(0, 212, 255, 0.8), inset 0 1px 4px rgba(255,255,255,0.3)'
+                    boxShadow: '0 0 15px rgba(0, 212, 255, 0.6), inset 0 1px 2px rgba(255,255,255,0.3)'
                   }}
                 >
                   <div
@@ -1024,7 +1024,7 @@ export default function ArenaPage() {
           ) : null}
 
           {/* Stats Grid with NEON ICONS */}
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="grid grid-cols-2 gap-1.5 mb-2">
             <StatIcon stat="strength" value={hero.stats.strength || 10} />
             <StatIcon stat="speed" value={hero.stats.speed || 10} />
             <StatIcon stat="durability" value={hero.stats.durability || 10} />
@@ -1032,7 +1032,7 @@ export default function ArenaPage() {
           </div>
 
           {/* Abilities - 2x2 with GLOWING BORDERS */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {hero.abilities.slice(0, 4).map((ability, idx) => {
               const abilityColors = ['#ff6b35', '#a855f7', '#ef4444', '#00d4ff'];
               const pwrValue = Math.floor(Math.random() * 40) + 60;
@@ -1040,32 +1040,32 @@ export default function ArenaPage() {
               return (
                 <div
                   key={idx}
-                  className="group relative bg-black/60 rounded-2xl p-3 min-h-[90px] flex flex-col justify-between transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+                  className="group relative bg-black/60 rounded-xl p-2 min-h-[50px] flex flex-col justify-between transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
                   style={{
                     border: `2px solid ${abilityColors[idx]}40`,
-                    boxShadow: `0 0 20px ${abilityColors[idx]}30, inset 0 0 20px ${abilityColors[idx]}10`,
+                    boxShadow: `0 0 15px ${abilityColors[idx]}30, inset 0 0 15px ${abilityColors[idx]}10`,
                     backdropFilter: 'blur(10px)'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = abilityColors[idx];
-                    e.currentTarget.style.boxShadow = `0 0 30px ${abilityColors[idx]}, inset 0 0 30px ${abilityColors[idx]}20`;
+                    e.currentTarget.style.boxShadow = `0 0 25px ${abilityColors[idx]}, inset 0 0 25px ${abilityColors[idx]}20`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = `${abilityColors[idx]}40`;
-                    e.currentTarget.style.boxShadow = `0 0 20px ${abilityColors[idx]}30, inset 0 0 20px ${abilityColors[idx]}10`;
+                    e.currentTarget.style.boxShadow = `0 0 15px ${abilityColors[idx]}30, inset 0 0 15px ${abilityColors[idx]}10`;
                   }}
                 >
                   {/* Ability Name */}
-                  <div className="text-xs font-stats font-bold text-gray-200 leading-tight">
-                    {ability.length > 16 ? ability.substring(0, 16) + '...' : ability}
+                  <div className="text-[10px] font-stats font-bold text-gray-200 leading-tight">
+                    {ability.length > 14 ? ability.substring(0, 14) + '...' : ability}
                   </div>
 
                   {/* PWR Badge - NEON */}
                   <div
-                    className="text-2xl font-gaming font-black"
+                    className="text-lg font-gaming font-black"
                     style={{
                       color: abilityColors[idx],
-                      textShadow: `0 0 10px ${abilityColors[idx]}, 0 0 20px ${abilityColors[idx]}`
+                      textShadow: `0 0 8px ${abilityColors[idx]}, 0 0 15px ${abilityColors[idx]}`
                     }}
                   >
                     {pwrValue}
@@ -1162,37 +1162,37 @@ export default function ArenaPage() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 py-4 relative z-10">
         {/* Header - CYBER STYLE */}
-        <div className="text-center mb-10">
-          <h1 className="text-6xl font-gaming font-black mb-3 flex items-center justify-center gap-4">
+        <div className="text-center mb-4">
+          <h1 className="text-3xl font-gaming font-black mb-2 flex items-center justify-center gap-3">
             <Swords
-              size={56}
+              size={32}
               className="text-cyan-400"
               style={{
-                filter: 'drop-shadow(0 0 20px #00d4ff) drop-shadow(0 0 40px #00d4ff)',
+                filter: 'drop-shadow(0 0 15px #00d4ff) drop-shadow(0 0 30px #00d4ff)',
                 animation: 'pulse 2s ease-in-out infinite'
               }}
             />
             <span
               className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent"
               style={{
-                textShadow: '0 0 40px rgba(0, 212, 255, 0.5)',
+                textShadow: '0 0 30px rgba(0, 212, 255, 0.5)',
                 animation: 'neon-pulse 3s ease-in-out infinite'
               }}
             >
               BATTLE ARENA
             </span>
             <Swords
-              size={56}
+              size={32}
               className="text-cyan-400"
               style={{
-                filter: 'drop-shadow(0 0 20px #00d4ff) drop-shadow(0 0 40px #00d4ff)',
+                filter: 'drop-shadow(0 0 15px #00d4ff) drop-shadow(0 0 30px #00d4ff)',
                 animation: 'pulse 2s ease-in-out infinite'
               }}
             />
           </h1>
-          <p className="text-cyan-300 text-lg font-stats font-semibold tracking-wide">
+          <p className="text-cyan-300 text-sm font-stats font-semibold tracking-wide">
             200 KÄMPFER • RPG-KAMPFSYSTEM • CYBER NEON
           </p>
 
@@ -1239,31 +1239,31 @@ export default function ArenaPage() {
           />
         </div>
 
-        {/* VS Divider - MASSIVE NEON */}
-        <div className="flex flex-col items-center justify-center py-8 mb-10">
+        {/* VS Divider - NEON */}
+        <div className="flex flex-col items-center justify-center py-3 mb-4">
           <div
-            className="text-9xl font-gaming font-black mb-4"
+            className="text-4xl font-gaming font-black mb-2"
             style={{
               background: 'linear-gradient(180deg, #ffd700, #ff8c00, #ff6b35)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              textShadow: '0 0 40px rgba(255, 215, 0, 0.6)',
+              textShadow: '0 0 30px rgba(255, 215, 0, 0.6)',
               animation: 'neon-pulse 2s ease-in-out infinite, pulse 2s ease-in-out infinite',
-              filter: 'drop-shadow(0 0 60px #ffd700) drop-shadow(0 0 90px #ff8c00)'
+              filter: 'drop-shadow(0 0 40px #ffd700) drop-shadow(0 0 60px #ff8c00)'
             }}
           >
             VS
           </div>
           {battleState && (
             <div
-              className="text-2xl font-gaming font-black px-8 py-3 rounded-full border-2"
+              className="text-sm font-gaming font-black px-4 py-1.5 rounded-full border-2"
               style={{
                 background: 'rgba(10, 15, 30, 0.9)',
                 backdropFilter: 'blur(10px)',
                 borderColor: '#ffd70040',
                 color: '#ffd700',
-                textShadow: '0 0 20px #ffd700',
-                boxShadow: '0 0 40px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.1)'
+                textShadow: '0 0 15px #ffd700',
+                boxShadow: '0 0 30px rgba(255, 215, 0, 0.4), inset 0 0 15px rgba(255, 215, 0, 0.1)'
               }}
             >
               RUNDE {battleState.round}
@@ -1271,21 +1271,21 @@ export default function ArenaPage() {
           )}
         </div>
 
-        {/* Action Buttons - NEW TURN-BASED RPG STYLE */}
-        <div className="max-w-2xl mx-auto space-y-4 mb-10">
+        {/* Action Buttons - TURN-BASED RPG STYLE */}
+        <div className="max-w-2xl mx-auto space-y-3 mb-4">
           {/* Coin Display */}
-          <div className="text-center mb-4">
+          <div className="text-center mb-2">
             <div
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-full border-2"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border-2"
               style={{
                 background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.1))',
                 backdropFilter: 'blur(10px)',
                 borderColor: '#ffd70060',
-                boxShadow: '0 0 30px rgba(255, 215, 0, 0.3), inset 0 0 20px rgba(255, 215, 0, 0.1)'
+                boxShadow: '0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 15px rgba(255, 215, 0, 0.1)'
               }}
             >
-              <span className="text-3xl">💰</span>
-              <span className="text-2xl font-gaming font-black text-yellow-400">
+              <span className="text-xl">💰</span>
+              <span className="text-base font-gaming font-black text-yellow-400">
                 {totalCoins} COINS
               </span>
             </div>
@@ -1295,106 +1295,101 @@ export default function ArenaPage() {
           {(!battleState || !battleState.isActive) && fighter1 && fighter2 && (
             <button
               onClick={startBattle}
-              className="w-full rounded-2xl font-gaming font-black text-3xl uppercase flex items-center justify-center gap-4 transition-all active:scale-95 border-2"
+              className="w-full rounded-xl font-gaming font-black text-xl uppercase flex items-center justify-center gap-3 py-4 transition-all active:scale-95 border-2"
               style={{
-                minHeight: '80px',
                 background: 'linear-gradient(135deg, #00ff88, #00cc66, #00aa55)',
                 color: '#000',
                 borderColor: '#00ff88',
-                boxShadow: '0 0 50px rgba(0, 255, 136, 0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(255,255,255,0.3)'
+                boxShadow: '0 0 40px rgba(0, 255, 136, 0.5), 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 6px rgba(255,255,255,0.3)'
               }}
             >
-              <Play size={40} fill="#000" />
+              <Play size={24} fill="#000" />
               START!
             </button>
           )}
 
           {/* TURN-BASED ACTION BUTTONS */}
           {battleState?.isActive && battleState?.waitingForPlayer && (
-            <div className="space-y-3">
-              <div className="text-center mb-4">
-                <div className="text-2xl font-gaming font-black text-cyan-400 animate-pulse"
+            <div className="space-y-2">
+              <div className="text-center mb-2">
+                <div className="text-base font-gaming font-black text-cyan-400 animate-pulse"
                   style={{
-                    textShadow: '0 0 20px #00d4ff, 0 0 40px #00d4ff'
+                    textShadow: '0 0 15px #00d4ff, 0 0 30px #00d4ff'
                   }}
                 >
                   WÄHLE DEINE AKTION!
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {/* ATTACK Button */}
                 <button
                   onClick={() => executePlayerAction('attack')}
-                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-105 border-2"
+                  className="rounded-xl font-gaming font-black text-sm uppercase flex flex-col items-center justify-center gap-1 py-2 transition-all active:scale-95 hover:scale-105 border-2"
                   style={{
-                    minHeight: '90px',
                     background: 'linear-gradient(135deg, #ff6b35, #ff4500)',
                     color: '#fff',
                     borderColor: '#ff6b35',
-                    boxShadow: '0 0 40px rgba(255, 107, 53, 0.6), inset 0 2px 6px rgba(255,255,255,0.2)'
+                    boxShadow: '0 0 30px rgba(255, 107, 53, 0.5), inset 0 1px 4px rgba(255,255,255,0.2)'
                   }}
                 >
-                  <Zap size={32} fill="#fff" />
+                  <Zap size={20} fill="#fff" />
                   <span>ANGRIFF</span>
-                  <span className="text-sm font-stats">Hoher Schaden</span>
+                  <span className="text-xs font-stats">Hoher Schaden</span>
                 </button>
 
                 {/* TACTICS Button */}
                 <button
                   onClick={() => executePlayerAction('tactics')}
-                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-105 border-2"
+                  className="rounded-xl font-gaming font-black text-sm uppercase flex flex-col items-center justify-center gap-1 py-2 transition-all active:scale-95 hover:scale-105 border-2"
                   style={{
-                    minHeight: '90px',
                     background: 'linear-gradient(135deg, #a855f7, #9333ea)',
                     color: '#fff',
                     borderColor: '#a855f7',
-                    boxShadow: '0 0 40px rgba(168, 85, 247, 0.6), inset 0 2px 6px rgba(255,255,255,0.2)'
+                    boxShadow: '0 0 30px rgba(168, 85, 247, 0.5), inset 0 1px 4px rgba(255,255,255,0.2)'
                   }}
                 >
-                  <Brain size={32} />
+                  <Brain size={20} />
                   <span>TAKTIK</span>
-                  <span className="text-sm font-stats">+Energy</span>
+                  <span className="text-xs font-stats">+Energy</span>
                 </button>
 
                 {/* DEFENSE Button */}
                 <button
                   onClick={() => executePlayerAction('defense')}
-                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-105 border-2"
+                  className="rounded-xl font-gaming font-black text-sm uppercase flex flex-col items-center justify-center gap-1 py-2 transition-all active:scale-95 hover:scale-105 border-2"
                   style={{
-                    minHeight: '90px',
                     background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                     color: '#fff',
                     borderColor: '#22c55e',
-                    boxShadow: '0 0 40px rgba(34, 197, 94, 0.6), inset 0 2px 6px rgba(255,255,255,0.2)'
+                    boxShadow: '0 0 30px rgba(34, 197, 94, 0.5), inset 0 1px 4px rgba(255,255,255,0.2)'
                   }}
                 >
-                  <Shield size={32} />
+                  <Shield size={20} />
                   <span>VERTEIDIGUNG</span>
-                  <span className="text-sm font-stats">-50% Schaden</span>
+                  <span className="text-xs font-stats">-50% Schaden</span>
                 </button>
 
                 {/* ULTIMATE Button */}
                 <button
                   onClick={() => executePlayerAction('ultimate')}
                   disabled={!battleState?.energy1 || battleState.energy1 < 100}
-                  className="rounded-2xl font-gaming font-black text-xl uppercase flex flex-col items-center justify-center gap-2 transition-all active:scale-95 hover:scale-110 border-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
+                  className="rounded-xl font-gaming font-black text-sm uppercase flex flex-col items-center justify-center gap-1 py-2 transition-all active:scale-95 hover:scale-110 border-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
                   style={{
-                    minHeight: '90px',
                     background: battleState?.energy1 >= 100
                       ? 'linear-gradient(135deg, #ffd700, #ff8c00, #ff6b35)'
                       : 'linear-gradient(135deg, #4b5563, #374151)',
                     color: '#fff',
                     borderColor: battleState?.energy1 >= 100 ? '#ffd700' : '#4b5563',
                     boxShadow: battleState?.energy1 >= 100
-                      ? '0 0 60px rgba(255, 215, 0, 0.9), inset 0 2px 8px rgba(255,255,255,0.3), 0 0 90px rgba(255, 140, 0, 0.6)'
-                      : '0 4px 16px rgba(0,0,0,0.3)',
+                      ? '0 0 40px rgba(255, 215, 0, 0.7), inset 0 1px 6px rgba(255,255,255,0.3), 0 0 60px rgba(255, 140, 0, 0.5)'
+                      : '0 2px 10px rgba(0,0,0,0.3)',
                     animation: battleState?.energy1 >= 100 ? 'pulse 1s ease-in-out infinite' : 'none'
                   }}
                 >
-                  <Swords size={32} fill={battleState?.energy1 >= 100 ? '#fff' : undefined} />
+                  <Swords size={20} fill={battleState?.energy1 >= 100 ? '#fff' : undefined} />
                   <span>ULTIMATE!</span>
-                  <span className="text-sm font-stats">
+                  <span className="text-xs font-stats">
                     {battleState?.energy1 >= 100 ? 'BEREIT!' : `${battleState?.energy1}/100`}
                   </span>
                 </button>
