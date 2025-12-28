@@ -684,10 +684,10 @@ class HeroForge:
 
         processor = StatProcessor(raw_heroes)
 
-        print(f"\n🚀 Starting Hero Forge Pipeline")
-        print(f"📊 Processing {len(raw_heroes)} heroes")
-        print(f"⚡ Rate limit: {self.rate_limit} concurrent requests")
-        print(f"🎲 AI Provider: {self.ai_provider.__class__.__name__}\n")
+        print(f"\n[*] Starting Hero Forge Pipeline")
+        print(f"[i] Processing {len(raw_heroes)} heroes")
+        print(f"[>] Rate limit: {self.rate_limit} concurrent requests")
+        print(f"[~] AI Provider: {self.ai_provider.__class__.__name__}\n")
 
         tasks = [
             self.process_hero(hero, processor)
@@ -704,7 +704,8 @@ class HeroForge:
 
         # Save to file
         output_path.write_text(
-            json.dumps([h.dict() for h in processed], indent=2, ensure_ascii=False)
+            json.dumps([h.dict() for h in processed], indent=2, ensure_ascii=False),
+            encoding='utf-8'
         )
 
         # Print statistics
@@ -716,26 +717,26 @@ class HeroForge:
         """Print pipeline statistics."""
 
         print(f"\n{'='*60}")
-        print(f"✅ PIPELINE COMPLETE")
+        print(f"[OK] PIPELINE COMPLETE")
         print(f"{'='*60}\n")
 
-        print(f"📊 Processing Stats:")
+        print(f"[i] Processing Stats:")
         print(f"  Total Processed: {self.stats_total['processed']}")
         print(f"  Manual Review Needed: {self.stats_total['manual_review']} ({self.stats_total['manual_review']/len(processed)*100:.1f}%)")
         print(f"  Blacklist Hits (retried): {self.stats_total['blacklist_hits']}")
         print(f"  Similarity Retries: {self.stats_total['similarity_retries']}")
 
-        print(f"\n🎯 Faction Distribution:")
+        print(f"\n[>] Faction Distribution:")
         for faction in Faction:
             count = sum(1 for h in processed if h.faction == faction)
             print(f"  {faction.value}: {count} ({count/len(processed)*100:.1f}%)")
 
-        print(f"\n⭐ Rarity Distribution:")
+        print(f"\n[*] Rarity Distribution:")
         for rarity in Rarity:
             count = sum(1 for h in processed if h.rarity == rarity)
             print(f"  {rarity.value}: {count} ({count/len(processed)*100:.1f}%)")
 
-        print(f"\n🎨 Sample Heroes:")
+        print(f"\n[~] Sample Heroes:")
         for rarity in [Rarity.LEGENDARY, Rarity.EPIC]:
             heroes = [h for h in processed if h.rarity == rarity and not h.needsManualReview]
             if heroes:
@@ -754,7 +755,7 @@ async def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="🛠️ Hero Forge - AI Hero Transformation Pipeline")
+    parser = argparse.ArgumentParser(description="Hero Forge - AI Hero Transformation Pipeline")
     parser.add_argument('--input', type=str, default='heroes_raw.json', help='Input JSON file')
     parser.add_argument('--output', type=str, default='heroes_processed.json', help='Output JSON file')
     parser.add_argument('--mode', choices=['test', 'prod'], default='test', help='Mode: test (mock AI) or prod (real AI)')
@@ -769,33 +770,33 @@ async def main():
     # Load input data
     input_path = Path(args.input)
     if not input_path.exists():
-        print(f"❌ Error: Input file '{args.input}' not found!")
-        print(f"   Please provide a JSON file with hero data.")
+        print(f"[ERROR] Input file '{args.input}' not found!")
+        print(f"        Please provide a JSON file with hero data.")
         return
 
-    raw_data = json.loads(input_path.read_text())
+    raw_data = json.loads(input_path.read_text(encoding='utf-8'))
     raw_heroes = [RawHero(**hero) for hero in raw_data]
 
     if args.limit:
         raw_heroes = raw_heroes[:args.limit]
-        print(f"🔧 Test mode: Processing first {args.limit} heroes")
+        print(f"[i] Test mode: Processing first {args.limit} heroes")
 
     # Initialize AI provider
     if args.mode == 'test' or args.provider == 'mock':
         ai_provider = MockAIProvider()
     elif args.provider == 'openai':
         if not args.api_key:
-            print("❌ Error: --api-key required for OpenAI provider")
+            print("[ERROR] --api-key required for OpenAI provider")
             return
         ai_provider = OpenAIProvider(args.api_key)
     elif args.provider == 'gemini':
         if not args.api_key:
-            print("❌ Error: --api-key required for Gemini provider")
+            print("[ERROR] --api-key required for Gemini provider")
             return
         ai_provider = GeminiProvider(args.api_key)
     elif args.provider == 'aimlapi':
         if not args.api_key:
-            print("❌ Error: --api-key required for AIMLAPI provider")
+            print("[ERROR] --api-key required for AIMLAPI provider")
             return
         ai_provider = AIMLAPIProvider(args.api_key)
     else:
@@ -810,15 +811,15 @@ async def main():
 
     await forge.process_all(raw_heroes, Path(args.output))
 
-    print(f"\n💾 Saved to: {args.output}")
-    print(f"🎮 Ready to import into HeroRank!\n")
+    print(f"\n[OK] Saved to: {args.output}")
+    print(f"[*] Ready to import into HeroRank!\n")
 
 
 if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n\n⚠️  Pipeline interrupted by user")
+        print("\n\n[!] Pipeline interrupted by user")
     except Exception as e:
-        print(f"\n❌ Fatal error: {e}")
+        print(f"\n[ERROR] Fatal error: {e}")
         raise
